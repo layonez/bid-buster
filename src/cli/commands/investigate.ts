@@ -1,10 +1,11 @@
 /**
  * Main investigation command: runs the full pipeline.
- * Collector → Signaler → Hypothesis → Prover → Verifier → Narrator
+ * Collector → Signaler → Hypothesis → Narrator → case folder
  */
 import { Command } from "commander";
 import { loadConfig } from "../config.js";
 import { createLogger } from "../../shared/logger.js";
+import { runInvestigation } from "../../orchestrator/pipeline.js";
 
 export const investigateCommand = new Command("run")
   .description("Run a full investigation pipeline")
@@ -21,30 +22,34 @@ export const investigateCommand = new Command("run")
     "A,B,C,D",
   )
   .action(async (options) => {
-    const parentOpts = options.parent?.opts() ?? {};
+    const parentOpts = options.parent?.parent?.opts() ?? {};
     const config = await loadConfig(parentOpts.config);
     const logger = createLogger(parentOpts.verbose);
 
-    const [periodStart, periodEnd] = (options.period as string).split(":");
+    if (parentOpts.cache === false) {
+      config.cache.enabled = false;
+    }
 
-    logger.info(
+    const [periodStart, periodEnd] = (options.period as string).split(":");
+    const outputDir = (parentOpts.output as string) ?? "./cases";
+
+    const casePath = await runInvestigation(
       {
         agency: options.agency,
         recipient: options.recipient,
-        period: { start: periodStart, end: periodEnd },
+        periodStart,
+        periodEnd,
+        outputDir,
+        awardTypeCodes: (options.awardTypes as string).split(","),
       },
-      "Starting full investigation",
+      config,
+      logger,
     );
 
-    // TODO: Phase 2+ - wire up pipeline
-    // 1. Collector: fetch + cache + normalize
-    // 2. Signaler: compute indicators → signal table
-    // 3. Hypothesis Maker: generate questions from signals
-    // 4. Prover: produce evidence artifacts
-    // 5. Verifier: validate all claims
-    // 6. Narrator: assemble case.md
-
-    logger.info(
-      "Full pipeline not yet implemented. Use `fetch` and `signal` subcommands for now.",
-    );
+    console.log(`\nCase folder: ${casePath}`);
+    console.log(`  case.md          - Investigation report`);
+    console.log(`  signals.json     - Red-flag signals`);
+    console.log(`  hypotheses.json  - Generated hypotheses`);
+    console.log(`  awards.json      - Normalized award data`);
+    console.log(`  provenance.json  - Run metadata`);
   });
