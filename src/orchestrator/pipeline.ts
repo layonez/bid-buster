@@ -9,6 +9,7 @@ import { runCollector } from "../collector/index.js";
 import { SignalEngine } from "../signaler/engine.js";
 import { generateHypotheses } from "../hypothesis/generator.js";
 import { assembleReport } from "../narrator/report.js";
+import { verifyReport } from "../verifier/checker.js";
 import { createProvenance } from "../shared/provenance.js";
 import { createCaseFolder, writeJson } from "../shared/fs.js";
 import { writeFile } from "node:fs/promises";
@@ -22,7 +23,7 @@ export async function runInvestigation(
   const startTime = Date.now();
 
   // ─── Step 1: Collect ───────────────────────────────────────────────────
-  logger.info("Step 1/4: Collecting data from USAspending...");
+  logger.info("Step 1/5: Collecting data from USAspending...");
 
   const collectorResult = await runCollector(
     {
@@ -40,7 +41,7 @@ export async function runInvestigation(
   );
 
   // ─── Step 2: Compute Signals ───────────────────────────────────────────
-  logger.info("Step 2/4: Computing red-flag signals...");
+  logger.info("Step 2/5: Computing red-flag signals...");
 
   const engine = new SignalEngine();
   engine.initialize(config);
@@ -53,7 +54,7 @@ export async function runInvestigation(
   );
 
   // ─── Step 3: Generate Hypotheses ───────────────────────────────────────
-  logger.info("Step 3/4: Generating hypotheses...");
+  logger.info("Step 3/5: Generating hypotheses...");
 
   const hypotheses = await generateHypotheses(signalResult.signals, {
     aiEnabled: config.ai.enabled,
@@ -64,7 +65,7 @@ export async function runInvestigation(
   logger.info({ hypotheses: hypotheses.length }, "Hypotheses generated");
 
   // ─── Step 4: Assemble Report ───────────────────────────────────────────
-  logger.info("Step 4/4: Assembling case report...");
+  logger.info("Step 4/5: Assembling case report...");
 
   const provenance = createProvenance(
     params as unknown as Record<string, unknown>,
@@ -87,6 +88,15 @@ export async function runInvestigation(
     provenance,
   });
 
+  // ─── Step 5: Verify ─────────────────────────────────────────────────────
+  logger.info("Step 5/5: Verifying report claims...");
+
+  const verification = verifyReport(report, signalResult);
+  logger.info(
+    { claims: verification.totalClaims, supported: verification.supported, unsupported: verification.unsupported },
+    verification.passed ? "Verification passed" : "Verification found unsupported claims",
+  );
+
   // ─── Write Case Folder ─────────────────────────────────────────────────
   const caseFolder = await createCaseFolder(params.outputDir);
 
@@ -94,6 +104,7 @@ export async function runInvestigation(
   await writeJson(caseFolder.provenancePath, provenance);
   await writeJson(join(caseFolder.path, "signals.json"), signalResult);
   await writeJson(join(caseFolder.path, "hypotheses.json"), hypotheses);
+  await writeJson(join(caseFolder.path, "verification.json"), verification);
   await writeJson(join(caseFolder.path, "awards.json"), collectorResult.awards);
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

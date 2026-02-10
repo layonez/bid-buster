@@ -3,6 +3,7 @@
  * Procurement Investigator CLI
  * Investigation-as-Code: Turn public procurement data into auditable integrity reports.
  */
+import "dotenv/config";
 import { Command } from "commander";
 import { investigateCommand } from "./commands/investigate.js";
 import { fetchCommand } from "./commands/fetch.js";

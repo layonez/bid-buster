@@ -31,6 +31,7 @@
     "@anthropic-ai/sdk": "^0.74.0",
     "commander": "^14.0.3",
     "cosmiconfig": "^9.0.0",
+    "dotenv": "^17.2.4",
     "p-retry": "^7.1.1",
     "p-throttle": "^8.1.0",
     "pino": "^10.3.1",

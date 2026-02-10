@@ -33,8 +33,8 @@ export async function generateHypotheses(
       .join("\n");
 
     const response = await client.messages.create({
-      model: options.model,
-      max_tokens: 1024,
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 512,
       system:
         "You are a procurement integrity analyst. Your role is to help interpret red-flag " +
         "indicators in public procurement data. You must maintain a strictly non-accusatory tone. " +
