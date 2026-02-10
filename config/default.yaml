@@ -1,0 +1,56 @@
+# Procurement Investigator - Default Configuration
+# Override these values in investigate.config.yaml or .investigaterc.yaml
+
+api:
+  baseUrl: "https://api.usaspending.gov/api/v2"
+  requestsPerSecond: 2
+  maxRetries: 3
+  pageSize: 100
+
+cache:
+  directory: ".cache"
+  enabled: true
+
+ai:
+  enabled: true
+  model: "claude-opus-4-6-20250219"
+
+signals:
+  R001_single_bid:
+    enabled: true
+    severityThreshold: 0.20      # >20% single-bid rate = high severity (EU benchmark)
+    requireCompetitiveType: true  # Only count competitively-solicited awards
+
+  R002_non_competitive:
+    enabled: true
+    codesToFlag:
+      - "B"    # Not Available for Competition
+      - "C"    # Not Competed
+      - "G"    # Not Competed Under SAP
+      - "NDO"  # Non-Competitive Delivery Order
+
+  R003_splitting:
+    enabled: true
+    thresholds:
+      - 250000     # Simplified Acquisition Threshold
+      - 7500000    # Certain set-aside thresholds
+    bandWidthPct: 0.10   # Flag awards within 10% below threshold
+    minClusterSize: 3    # Minimum awards in band to flag
+    period: "quarter"    # Group by quarter or year
+
+  R004_concentration:
+    enabled: true
+    vendorShareThreshold: 0.30   # Flag if vendor has >30% of agency spend
+    spikeThreshold: 0.15         # Flag if year-over-year increase >15%
+
+  R005_modifications:
+    enabled: true
+    maxModificationCount: 5      # Flag contracts with >5 substantive mods
+    maxGrowthRatio: 2.0          # Flag if total grows to >2x original
+
+  R006_price_outliers:
+    enabled: true
+    method: "iqr"                # "iqr" or "zscore"
+    iqrMultiplier: 1.5           # Q3 + 1.5*IQR (standard outlier detection)
+    zscoreThreshold: 2.0         # >2 standard deviations above mean
+    minGroupSize: 5              # Minimum awards per category to compute

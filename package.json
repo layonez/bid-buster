@@ -1,0 +1,47 @@
+{
+  "name": "procurement-investigator",
+  "version": "0.1.0",
+  "description": "Investigation-as-Code: Turn public procurement data into auditable integrity reports",
+  "type": "module",
+  "bin": {
+    "investigate": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "investigate": "tsx src/cli/index.ts"
+  },
+  "keywords": [
+    "procurement",
+    "investigation",
+    "red-flags",
+    "usaspending",
+    "open-contracting",
+    "transparency"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "commander": "^14.0.3",
+    "cosmiconfig": "^9.0.0",
+    "p-retry": "^7.1.1",
+    "p-throttle": "^8.1.0",
+    "pino": "^10.3.1",
+    "simple-statistics": "^7.8.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "eslint": "^10.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
