@@ -1,0 +1,22 @@
+{
+  "spending_level": "awards",
+  "limit": 1,
+  "results": [
+    {
+      "internal_id": 272710476,
+      "Award ID": "0007",
+      "Recipient Name": "MASSACHUSETTS INSTITUTE OF TECHNOLOGY",
+      "Award Amount": 1594101040.69,
+      "generated_internal_id": "CONT_AWD_0007_9700_FA870215D0001_9700"
+    }
+  ],
+  "page_metadata": {
+    "page": 1,
+    "hasNext": true,
+    "last_record_unique_id": 272710476,
+    "last_record_sort_value": "1594101040.69"
+  },
+  "messages": [
+    "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. "
+  ]
+}

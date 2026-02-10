@@ -1,0 +1,115 @@
+{
+  "spending_level": "awards",
+  "limit": 10,
+  "results": [
+    {
+      "internal_id": 309494502,
+      "Award ID": "N0001917C0001",
+      "Recipient Name": "LOCKHEED MARTIN CORPORATION",
+      "Award Amount": 35135514910.2,
+      "Description": "LRIP LOT 12 ADVANCE ACQUISITION CONTRACT",
+      "Awarding Sub Agency": "Department of the Navy",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_N0001917C0001_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 309506838,
+      "Award ID": "N0002417C2100",
+      "Recipient Name": "ELECTRIC BOAT CORPORATION",
+      "Award Amount": 34650897755.0,
+      "Description": "SSN 802 AND 803 LONG LEAD TIME MATERIAL",
+      "Awarding Sub Agency": "Department of the Navy",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_N0002417C2100_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 309505151,
+      "Award ID": "N0002412C2115",
+      "Recipient Name": "ELECTRIC BOAT CORPORATION",
+      "Award Amount": 19614617549.0,
+      "Description": "SSN 792 LONG LEAD TIME MATERIAL",
+      "Awarding Sub Agency": "Department of the Navy",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_N0002412C2115_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 309494374,
+      "Award ID": "N0001914C0067",
+      "Recipient Name": "THE BOEING COMPANY",
+      "Award Amount": 18129749821.79,
+      "Description": "USN P-8A FRP II LONG LEAD MATERIAL",
+      "Awarding Sub Agency": "Defense Contract Management Agency",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_N0001914C0067_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 349072811,
+      "Award ID": "W58RGZ12C0008",
+      "Recipient Name": "SIKORSKY AIRCRAFT CORPORATION",
+      "Award Amount": 11602480135.21,
+      "Description": "MULTI SERVICE, 5 YR, MULTI-YR CONTRACT FOR H-60 HELICOPTERS. FY2012 FY2016 PRODUCTION CONTRACT FOR ARMY/NAVY/FMS UH/HH/MH-60 HELICOPTERS TO INCLUDE PROCUREMENT OF UP TO 916 EACH AIRCRAFT AND RELATED SUPPORT, SERVICES, SYSTEMS/PROJECT MANAGEMENT, PUBLICATIONS, AND TECHNICAL DATA. FMS COUNTRIES INCLUDE SAUDI ARABIAN NATIONAL GUARD (SANG), TAIWAN, THAILAND AND ROYAL AUSTRALIAN NAVY (RAN).",
+      "Awarding Sub Agency": "Department of the Army",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_W58RGZ12C0008_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 298560047,
+      "Award ID": "FA863412C2651",
+      "Recipient Name": "THE BOEING COMPANY",
+      "Award Amount": 11204226412.65,
+      "Description": "RSAF F-15 FLEET MODERNIZATION PROGRAM",
+      "Awarding Sub Agency": "Department of the Air Force",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_FA863412C2651_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 309493751,
+      "Award ID": "N0001907C0001",
+      "Recipient Name": "BELL BOEING JOINT PROJECT OFFICE",
+      "Award Amount": 11040980157.1,
+      "Description": "MV-22 AIRCRAFT - FY08 (LOT 12)*",
+      "Awarding Sub Agency": "Defense Contract Management Agency",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_N0001907C0001_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 348949116,
+      "Award ID": "W31P4Q20C0023",
+      "Recipient Name": "LOCKHEED MARTIN CORPORATION",
+      "Award Amount": 10475203567.9,
+      "Description": "THE CONTRACT AWARD IS FOR THE FY21/FY22/FY23 BASE AND OPTION PRICING FOR PHASE ARRAY TRACKING RADAR TO INTERCEPT ON TARGET (PATRIOT) ADVANCED CAPABILITY-3 (PAC-3) PRODUCTION REQUIREMENTS FOR THE UNITED STATES (US) AND FOREIGN MILITARY SALES (FMS)",
+      "Awarding Sub Agency": "Department of the Army",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_W31P4Q20C0023_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 298553472,
+      "Award ID": "FA861108C2897",
+      "Recipient Name": "LOCKHEED MARTIN CORPORATION",
+      "Award Amount": 8828579157.39,
+      "Description": "FOLLOW-ON AGILE SUSTAINMENT TO THE RAPTOR (FASTER)",
+      "Awarding Sub Agency": "Defense Contract Management Agency",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_FA861108C2897_9700_-NONE-_-NONE-"
+    },
+    {
+      "internal_id": 307239358,
+      "Award ID": "HQ014717C0032",
+      "Recipient Name": "LOCKHEED MARTIN CORPORATION",
+      "Award Amount": 8699872799.82,
+      "Description": "HQ0147-17-C-0032 UNDEFINITIZED CONTRACT ACTION (UCA) FOR THAAD INTERCEPTOR LOT 9 PRODUCTION - QTY OF 23",
+      "Awarding Sub Agency": "Missile Defense Agency",
+      "Contract Award Type": "DEFINITIVE CONTRACT",
+      "generated_internal_id": "CONT_AWD_HQ014717C0032_9700_-NONE-_-NONE-"
+    }
+  ],
+  "page_metadata": {
+    "page": 1,
+    "hasNext": true,
+    "last_record_unique_id": 307239358,
+    "last_record_sort_value": "8699872799.82"
+  },
+  "messages": [
+    "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. "
+  ]
+}

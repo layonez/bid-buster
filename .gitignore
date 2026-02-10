@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.cache/
+*.tsbuildinfo
+coverage/
+cases/
+.env
+.env.local
+
+# Reference repos (local only, cloned separately)
+references/cardinal-rs/
+references/kingfisher-collect/
+references/ocdskit/

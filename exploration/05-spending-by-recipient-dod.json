@@ -1,0 +1,218 @@
+{
+  "category": "recipient",
+  "spending_level": "transactions",
+  "limit": 25,
+  "page_metadata": {
+    "page": 1,
+    "next": 2,
+    "previous": null,
+    "hasNext": true,
+    "hasPrevious": false
+  },
+  "results": [
+    {
+      "amount": 22464901787.64,
+      "recipient_id": "6cf5fb1b-4988-d087-5dc1-70939d8fc6c4-C",
+      "name": "LOCKHEED MARTIN CORPORATION",
+      "code": "008016958",
+      "uei": "G4KDGE4JFFK7",
+      "total_outlays": null
+    },
+    {
+      "amount": 11884521989.09,
+      "recipient_id": "d5ab5f51-db3a-a26f-96a1-1b24c3e2802c-C",
+      "name": "ELECTRIC BOAT CORPORATION",
+      "code": "963737366",
+      "uei": "E7BEKJ4V9528",
+      "total_outlays": null
+    },
+    {
+      "amount": 8252641196.72,
+      "recipient_id": "9ab85632-42cc-5fa4-2a9c-d734034ddd33-C",
+      "name": "THE BOEING COMPANY",
+      "code": "149879157",
+      "uei": "JJM4FRDZJDX1",
+      "total_outlays": null
+    },
+    {
+      "amount": 8243334262.51,
+      "recipient_id": "1068e466-707d-6b6f-367f-0255fab79b8c-C",
+      "name": "HUMANA GOVERNMENT BUSINESS INC",
+      "code": "805349198",
+      "uei": "ZE6ZM6NKSV43",
+      "total_outlays": null
+    },
+    {
+      "amount": 8137373441.11,
+      "recipient_id": "62e141b3-4887-5b39-6b75-eace9326395c-C",
+      "name": "RTX CORPORATION",
+      "code": "001447952",
+      "uei": "QN1BCFY7JDJ5",
+      "total_outlays": null
+    },
+    {
+      "amount": 7567444170.6,
+      "recipient_id": "779b3e3e-364f-7cbc-28a4-a2b4484b86f4-C",
+      "name": "LOCKHEED MARTIN CORPORATION",
+      "code": "794571448",
+      "uei": "XFJMYSYFJEK4",
+      "total_outlays": null
+    },
+    {
+      "amount": 6681853720.11,
+      "recipient_id": "01c4a3a3-b4c5-ce4e-822b-d17f09985001-C",
+      "name": "RAYTHEON COMPANY",
+      "code": "794598573",
+      "uei": "VTEWM5QSE598",
+      "total_outlays": null
+    },
+    {
+      "amount": 6002301919.38,
+      "recipient_id": "1eb5d9d6-aabf-3228-e6ab-79cf9729c9d7-C",
+      "name": "HUNTINGTON INGALLS INCORPORATED",
+      "code": "830135799",
+      "uei": "C3NLZNSMU254",
+      "total_outlays": null
+    },
+    {
+      "amount": 5421498946.54,
+      "recipient_id": "22d282c6-4508-7d30-97f1-7401ea73b12a-C",
+      "name": "THE BOEING COMPANY",
+      "code": "039267141",
+      "uei": "WZWRLY4G3PL8",
+      "total_outlays": null
+    },
+    {
+      "amount": 5154282979.84,
+      "recipient_id": "edc402f7-abac-eafe-2aae-3fdcd8d1bb8a-C",
+      "name": "AMERISOURCEBERGEN DRUG CORP",
+      "code": "007914906",
+      "uei": "KABZK8W6PQT3",
+      "total_outlays": null
+    },
+    {
+      "amount": 5067003011.43,
+      "recipient_id": "d64537c9-5482-dd40-cdd4-5cf07b66329d-C",
+      "name": "SIKORSKY AIRCRAFT CORPORATION",
+      "code": "835551474",
+      "uei": "UTJWTSLMFNG4",
+      "total_outlays": null
+    },
+    {
+      "amount": 4410727669.29,
+      "recipient_id": "9c708c7c-f339-5fc8-0455-a5aaea1d2da5-C",
+      "name": "ATLANTIC DIVING SUPPLY, INC.",
+      "code": "027079776",
+      "uei": "GJMSFBCNMSK3",
+      "total_outlays": null
+    },
+    {
+      "amount": 4006215707.84,
+      "recipient_id": "95e5fad6-bf60-0254-a5b0-65c750733414-C",
+      "name": "HEALTH NET FEDERAL SERVICES, LLC",
+      "code": "848003661",
+      "uei": "F7NGF6NJFB96",
+      "total_outlays": null
+    },
+    {
+      "amount": 3429654834.34,
+      "recipient_id": "695d5739-ecc3-8484-ba2b-f9c8b4652a4a-C",
+      "name": "LOCKHEED MARTIN CORPORATION",
+      "code": "196189385",
+      "uei": "H7PNSVNN5827",
+      "total_outlays": null
+    },
+    {
+      "amount": 3337995012.5,
+      "recipient_id": "99938bc0-e262-06ff-9f94-386fd3da88dc-C",
+      "name": "GENERAL DYNAMICS LAND SYSTEMS INC.",
+      "code": "131266926",
+      "uei": "HAWKSQF848W7",
+      "total_outlays": null
+    },
+    {
+      "amount": 3140469745.77,
+      "recipient_id": "dde47d6b-a165-dbed-d5bd-a6e55ca6e591-C",
+      "name": "HUNTINGTON INGALLS INC",
+      "code": "001307495",
+      "uei": "WMXDDH6HJNA5",
+      "total_outlays": null
+    },
+    {
+      "amount": 2926681444.23,
+      "recipient_id": "a039e3c2-edcd-2b9b-4459-dcde55990ab4-C",
+      "name": "NORTHROP GRUMMAN SYSTEMS CORP",
+      "code": "117554355",
+      "uei": "D8QQPFNYJD63",
+      "total_outlays": null
+    },
+    {
+      "amount": 2543008479.24,
+      "recipient_id": "6e7a895c-aa57-8600-2a8a-4e237f6213f6-C",
+      "name": "LOCKHEED MARTIN CORP",
+      "code": "926784042",
+      "uei": "FYHNA5WC8XD7",
+      "total_outlays": null
+    },
+    {
+      "amount": 2534168849.94,
+      "recipient_id": "ffca72e5-fba2-798a-6969-2a6c45e9f985-C",
+      "name": "BOOZ ALLEN HAMILTON INC",
+      "code": "006928857",
+      "uei": "JCBMLGPE6Z71",
+      "total_outlays": null
+    },
+    {
+      "amount": 2498910981.15,
+      "recipient_id": "cce9df51-3950-87f4-0b34-4353d5a08f32-C",
+      "name": "RAYTHEON COMPANY",
+      "code": "196882310",
+      "uei": "XSV6AZJ6SDJ7",
+      "total_outlays": null
+    },
+    {
+      "amount": 2469067104.42,
+      "recipient_id": "27b04395-cee8-a47d-2a5c-3e2b78dc7b0a-C",
+      "name": "THE BOEING COMPANY",
+      "code": "832963453",
+      "uei": "LAJJQWA1PF31",
+      "total_outlays": null
+    },
+    {
+      "amount": 2412905771.83,
+      "recipient_id": "66092799-9c72-fde6-e008-9d381191aed2-C",
+      "name": "GENERAL ELECTRIC COMPANY",
+      "code": "001408509",
+      "uei": "E3HYKKLT5ZT1",
+      "total_outlays": null
+    },
+    {
+      "amount": 2384641077.77,
+      "recipient_id": "17cffcef-16bf-4ea4-6c66-532996bf7d50-C",
+      "name": "OKINAWA IDEMITSU K.K.",
+      "code": "718077433",
+      "uei": "JA8GWB6NWKC5",
+      "total_outlays": null
+    },
+    {
+      "amount": 2365625370.57,
+      "recipient_id": "aac98290-78f5-735a-8f80-d06daa6e4c59-C",
+      "name": "BAE SYSTEMS LAND & ARMAMENTS L.P.",
+      "code": "834476079",
+      "uei": "DMHSJF9K3XP9",
+      "total_outlays": null
+    },
+    {
+      "amount": 2335898812.76,
+      "recipient_id": "fe5366b4-84c8-12ff-126f-f123de29819c-C",
+      "name": "AMENTUM SERVICES, INC.",
+      "code": "961530545",
+      "uei": "QEMLRQA7PLG4",
+      "total_outlays": null
+    }
+  ],
+  "messages": [
+    "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+    "'subawards' will be deprecated in the future. Set \u2018spending_level\u2019 to \u2018subawards\u2019 instead. See documentation for more information. "
+  ]
+}
