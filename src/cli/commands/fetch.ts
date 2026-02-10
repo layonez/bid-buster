@@ -1,10 +1,10 @@
 /**
  * Fetch command: data collection from USAspending API.
- * Handles pagination, caching, detail enrichment, and snapshot creation.
  */
 import { Command } from "commander";
 import { loadConfig } from "../config.js";
 import { createLogger } from "../../shared/logger.js";
+import { runCollector } from "../../collector/index.js";
 
 export const fetchCommand = new Command("fetch")
   .description("Collect procurement data from USAspending API")
@@ -21,37 +21,39 @@ export const fetchCommand = new Command("fetch")
     "A,B,C,D",
   )
   .option("--page-limit <n>", "Maximum pages to fetch", "100")
-  .option("--with-details", "Fetch individual award details (slower)", false)
-  .option(
-    "--with-transactions",
-    "Fetch modification history (slower)",
-    false,
-  )
+  .option("--with-details", "Fetch individual award details", false)
+  .option("--with-transactions", "Fetch modification history", false)
   .action(async (options) => {
     const parentOpts = options.parent?.parent?.opts() ?? {};
     const config = await loadConfig(parentOpts.config);
     const logger = createLogger(parentOpts.verbose);
 
+    if (parentOpts.cache === false) {
+      config.cache.enabled = false;
+    }
+
     const [periodStart, periodEnd] = (options.period as string).split(":");
 
-    logger.info(
+    const result = await runCollector(
       {
         agency: options.agency,
         recipient: options.recipient,
-        period: { start: periodStart, end: periodEnd },
+        periodStart,
+        periodEnd,
+        awardTypeCodes: (options.awardTypes as string).split(","),
         withDetails: options.withDetails,
         withTransactions: options.withTransactions,
+        pageLimit: parseInt(options.pageLimit as string, 10),
       },
-      "Starting data collection",
+      config,
+      logger,
     );
 
-    // TODO: Phase 2 - implement collector
-    // 1. Build search filters from CLI options
-    // 2. Paginate through spending_by_award
-    // 3. Optionally fetch award details
-    // 4. Optionally fetch transaction history
-    // 5. Normalize and cache results
-    // 6. Create snapshot with provenance
-
-    logger.info("Collector agent not yet implemented.");
+    // Print summary to stdout
+    console.log(`\nCollection complete:`);
+    console.log(`  Awards: ${result.awards.length}`);
+    console.log(`  Details fetched: ${result.raw.awardDetails.size}`);
+    console.log(`  Transactions fetched: ${result.raw.transactions.size}`);
+    console.log(`  Cache hits: ${result.raw.cacheHits}`);
+    console.log(`  Snapshot: ${result.snapshotDir}/awards.json`);
   });
