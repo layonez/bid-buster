@@ -82,8 +82,8 @@ const sampleAwards: NormalizedAward[] = [
 // ─── Tool Definition Tests ──────────────────────────────────────────────────
 
 describe("Tool Definitions", () => {
-  it("defines all 6 tools", () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(6);
+  it("defines all 8 tools", () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(8);
   });
 
   it("every tool has name, description, and input_schema", () => {
@@ -157,6 +157,14 @@ describe("Tool Execution Dispatcher", () => {
     [TOOL_NAMES.LOOKUP_AWARD_DETAIL]: vi.fn().mockResolvedValue({
       award: { awardId: "AWARD-001" },
       source: "test",
+    }),
+    [TOOL_NAMES.LOG_REASONING]: vi.fn().mockResolvedValue({
+      logged: true,
+      stepIndex: 0,
+    }),
+    [TOOL_NAMES.CREATE_FINDING]: vi.fn().mockResolvedValue({
+      created: true,
+      findingId: "F-R002-AGENT-1",
     }),
   };
 

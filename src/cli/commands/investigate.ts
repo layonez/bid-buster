@@ -28,6 +28,7 @@ export const investigateCommand = new Command("run")
   .option("--charts", "Generate Vega-Lite SVG charts in evidence/", true)
   .option("--no-charts", "Disable chart generation")
   .option("--no-ai", "Disable all AI features (template-only output)")
+  .option("--full-evidence", "Include full detail evidence CSVs (larger output)", false)
   .option("--open", "Auto-open dashboard.html in browser after completion", false)
   .action(async (options, command) => {
     if (!options.agency && !options.recipient) {
@@ -62,22 +63,20 @@ export const investigateCommand = new Command("run")
         deep: options.deep,
         charts: options.charts,
         noAi: options.ai === false,
+        fullEvidence: options.fullEvidence,
       },
     );
 
     console.log(`\nCase folder: ${casePath}`);
-    console.log(`  case.md              - Investigation report`);
+    console.log(`  README.md            - Executive briefing (start here)`);
+    console.log(`  case.md              - Full investigation report`);
     console.log(`  dashboard.html       - Interactive HTML dashboard`);
-    console.log(`  signals.json         - Red-flag signals`);
-    console.log(`  hypotheses.json      - Generated hypotheses`);
-    console.log(`  awards.json          - Normalized award data`);
-    console.log(`  evidence-manifest.json - Evidence artifact references`);
     console.log(`  evidence/            - CSV evidence tables + SVG charts`);
-    console.log(`  verification.json    - Claim verification results`);
+    console.log(`  data/                - JSON data files (signals, awards, findings)`);
     console.log(`  provenance.json      - Run metadata & audit trail`);
 
     if (options.deep) {
-      console.log(`  investigation.json   - Opus 4.6 agent findings & tool log`);
+      console.log(`  investigation-narrative.md - Agent reasoning trace`);
     }
 
     // Auto-open dashboard if requested

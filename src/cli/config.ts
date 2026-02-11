@@ -45,6 +45,12 @@ const ENRICHMENT_DEFAULTS = {
   },
 } as const;
 
+const MATERIALITY_DEFAULTS = {
+  minAwardCount: 1,
+  minTotalAmount: 0,
+  maxFindings: 20,
+} as const;
+
 const INVESTIGATOR_DEFAULTS = {
   enabled: true,
   model: "claude-opus-4-6-20250219",
@@ -179,6 +185,12 @@ const IndicatorSchema = z.object({
   enabled: z.boolean().optional(),
 }).passthrough();
 
+const MaterialitySchema = z.object({
+  minAwardCount: z.number().optional(),
+  minTotalAmount: z.number().optional(),
+  maxFindings: z.number().optional(),
+});
+
 const SignalSchema = z.object({
   R001_single_bid: IndicatorSchema.optional(),
   R002_non_competitive: IndicatorSchema.optional(),
@@ -193,6 +205,7 @@ const RawConfigSchema = z.object({
   cache: CacheSchema.optional(),
   ai: AiSchema.optional(),
   signals: SignalSchema.optional(),
+  materiality: MaterialitySchema.optional(),
   enrichment: EnrichmentSchema.optional(),
   investigator: InvestigatorSchema.optional(),
   charts: ChartsSchema.optional(),
@@ -222,6 +235,11 @@ export interface AppConfig {
     R004_concentration: { enabled: boolean; vendorShareThreshold: number; spikeThreshold: number };
     R005_modifications: { enabled: boolean; maxModificationCount: number; maxGrowthRatio: number };
     R006_price_outliers: { enabled: boolean; method: "iqr" | "zscore"; iqrMultiplier: number; zscoreThreshold: number; minGroupSize: number };
+  };
+  materiality: {
+    minAwardCount: number;
+    minTotalAmount: number;
+    maxFindings: number;
   };
   enrichment: {
     samGov: {
@@ -290,6 +308,7 @@ function resolveConfig(raw: z.infer<typeof RawConfigSchema>): AppConfig {
       R005_modifications: deepMerge(SIGNAL_DEFAULTS.R005_modifications, raw.signals?.R005_modifications),
       R006_price_outliers: deepMerge(SIGNAL_DEFAULTS.R006_price_outliers, raw.signals?.R006_price_outliers),
     },
+    materiality: deepMerge(MATERIALITY_DEFAULTS, raw.materiality),
     enrichment: {
       samGov: deepMerge(ENRICHMENT_DEFAULTS.samGov, raw.enrichment?.samGov),
       openSanctions: deepMerge(ENRICHMENT_DEFAULTS.openSanctions, raw.enrichment?.openSanctions),

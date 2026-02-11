@@ -6,7 +6,7 @@
  * Actual enrichment calls are wired during agent construction.
  */
 import type Anthropic from "@anthropic-ai/sdk";
-import type { ToolCallRecord } from "../shared/types.js";
+import type { ToolCallRecord, InvestigationStep, MaterialFinding } from "../shared/types.js";
 import type {
   EntityVerificationResult,
   ExclusionCheckResult,
@@ -23,6 +23,8 @@ export const TOOL_NAMES = {
   FETCH_COMPARABLE_AWARDS: "fetch_comparable_awards",
   ANALYZE_STATISTICAL_PATTERN: "analyze_statistical_pattern",
   LOOKUP_AWARD_DETAIL: "lookup_award_detail",
+  LOG_REASONING: "log_reasoning",
+  CREATE_FINDING: "create_finding",
 } as const;
 
 export type ToolName = (typeof TOOL_NAMES)[keyof typeof TOOL_NAMES];
@@ -67,13 +69,36 @@ export interface LookupAwardDetailInput {
   award_id: string;
 }
 
+export interface LogReasoningInput {
+  phase: "hypothesis" | "data_gathering" | "analysis" | "synthesis";
+  reasoning: string;
+  related_signals?: string[];
+  related_entities?: string[];
+}
+
+export interface CreateFindingInput {
+  entity_name: string;
+  indicator_id: string;
+  indicator_name: string;
+  severity: "low" | "medium" | "high";
+  reasoning: string;
+  affected_award_ids: string[];
+  condition: string;
+  criteria: string;
+  cause: string;
+  effect: string;
+  recommendation: string;
+}
+
 export type ToolInput =
   | VerifyEntityInput
   | ScreenSanctionsInput
   | FetchSubawardsInput
   | FetchComparableAwardsInput
   | AnalyzeStatisticalPatternInput
-  | LookupAwardDetailInput;
+  | LookupAwardDetailInput
+  | LogReasoningInput
+  | CreateFindingInput;
 
 // ─── Tool Output Types ──────────────────────────────────────────────────────
 
@@ -121,13 +146,25 @@ export interface LookupAwardDetailOutput {
   source: string;
 }
 
+export interface LogReasoningOutput {
+  logged: boolean;
+  stepIndex: number;
+}
+
+export interface CreateFindingOutput {
+  created: boolean;
+  findingId: string;
+}
+
 export type ToolOutput =
   | VerifyEntityOutput
   | ScreenSanctionsOutput
   | FetchSubawardsOutput
   | FetchComparableAwardsOutput
   | AnalyzeStatisticalPatternOutput
-  | LookupAwardDetailOutput;
+  | LookupAwardDetailOutput
+  | LogReasoningOutput
+  | CreateFindingOutput;
 
 // ─── Tool Executor ──────────────────────────────────────────────────────────
 
@@ -149,6 +186,8 @@ export interface ToolExecutorMap {
   [TOOL_NAMES.FETCH_COMPARABLE_AWARDS]: ToolExecutorFn<FetchComparableAwardsInput, FetchComparableAwardsOutput>;
   [TOOL_NAMES.ANALYZE_STATISTICAL_PATTERN]: ToolExecutorFn<AnalyzeStatisticalPatternInput, AnalyzeStatisticalPatternOutput>;
   [TOOL_NAMES.LOOKUP_AWARD_DETAIL]: ToolExecutorFn<LookupAwardDetailInput, LookupAwardDetailOutput>;
+  [TOOL_NAMES.LOG_REASONING]: ToolExecutorFn<LogReasoningInput, LogReasoningOutput>;
+  [TOOL_NAMES.CREATE_FINDING]: ToolExecutorFn<CreateFindingInput, CreateFindingOutput>;
 }
 
 // ─── Tool Definitions (Anthropic SDK format) ────────────────────────────────
@@ -332,6 +371,106 @@ const lookupAwardDetailTool: Tool = {
   },
 };
 
+const logReasoningTool: Tool = {
+  name: TOOL_NAMES.LOG_REASONING,
+  description:
+    "Record your current reasoning and analytical thought process. Call this BEFORE and " +
+    "AFTER each investigation step to externalize your thinking. This creates a transparent " +
+    "audit trail of the investigation logic. Use 'hypothesis' phase when forming theories, " +
+    "'data_gathering' when planning data requests, 'analysis' when interpreting results, " +
+    "and 'synthesis' when combining findings.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      phase: {
+        type: "string",
+        enum: ["hypothesis", "data_gathering", "analysis", "synthesis"],
+        description: "Current investigation phase",
+      },
+      reasoning: {
+        type: "string",
+        description: "Your current reasoning, analysis, or thought process (be specific and detailed)",
+      },
+      related_signals: {
+        type: "array",
+        items: { type: "string" },
+        description: "Signal IDs related to this reasoning step (e.g., ['R002', 'R004'])",
+      },
+      related_entities: {
+        type: "array",
+        items: { type: "string" },
+        description: "Entity names related to this reasoning step",
+      },
+    },
+    required: ["phase", "reasoning"],
+  },
+};
+
+const createFindingTool: Tool = {
+  name: TOOL_NAMES.CREATE_FINDING,
+  description:
+    "Create a material finding based on your investigation. Use this when you have " +
+    "gathered sufficient evidence to articulate a finding using the Five C's framework " +
+    "(Condition, Criteria, Cause, Effect, Recommendation). Findings must be non-accusatory " +
+    "and evidence-based. This is how you formally report investigation results.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      entity_name: {
+        type: "string",
+        description: "Name of the entity this finding relates to",
+      },
+      indicator_id: {
+        type: "string",
+        description: "Primary indicator ID (e.g., 'R002')",
+      },
+      indicator_name: {
+        type: "string",
+        description: "Indicator name (e.g., 'Non-Competitive Awards')",
+      },
+      severity: {
+        type: "string",
+        enum: ["low", "medium", "high"],
+        description: "Finding severity level",
+      },
+      reasoning: {
+        type: "string",
+        description: "Detailed reasoning behind this finding",
+      },
+      affected_award_ids: {
+        type: "array",
+        items: { type: "string" },
+        description: "Award IDs affected by this finding",
+      },
+      condition: {
+        type: "string",
+        description: "Five C's: What did you find? (the current state)",
+      },
+      criteria: {
+        type: "string",
+        description: "Five C's: What should it be? (the standard or benchmark)",
+      },
+      cause: {
+        type: "string",
+        description: "Five C's: Why did this happen? (root cause or contributing factors)",
+      },
+      effect: {
+        type: "string",
+        description: "Five C's: What is the impact? (consequences or risks)",
+      },
+      recommendation: {
+        type: "string",
+        description: "Five C's: What should be done? (suggested follow-up actions)",
+      },
+    },
+    required: [
+      "entity_name", "indicator_id", "indicator_name", "severity",
+      "reasoning", "affected_award_ids",
+      "condition", "criteria", "cause", "effect", "recommendation",
+    ],
+  },
+};
+
 /**
  * All tool definitions for the Anthropic messages API.
  */
@@ -342,6 +481,8 @@ export const TOOL_DEFINITIONS: Tool[] = [
   fetchComparableAwardsTool,
   analyzeStatisticalPatternTool,
   lookupAwardDetailTool,
+  logReasoningTool,
+  createFindingTool,
 ];
 
 // ─── Tool Execution Dispatcher ──────────────────────────────────────────────
@@ -387,6 +528,12 @@ export async function executeToolCall(
         break;
       case TOOL_NAMES.LOOKUP_AWARD_DETAIL:
         output = await executors[TOOL_NAMES.LOOKUP_AWARD_DETAIL](args as LookupAwardDetailInput);
+        break;
+      case TOOL_NAMES.LOG_REASONING:
+        output = await executors[TOOL_NAMES.LOG_REASONING](args as LogReasoningInput);
+        break;
+      case TOOL_NAMES.CREATE_FINDING:
+        output = await executors[TOOL_NAMES.CREATE_FINDING](args as CreateFindingInput);
         break;
       default:
         throw new Error(`Unknown tool: ${toolName}`);

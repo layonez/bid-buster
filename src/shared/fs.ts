@@ -6,28 +6,78 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 import type { CaseFolder } from "./types.js";
 
+export interface CaseFolderOptions {
+  agency?: string;
+  recipient?: string;
+  fullEvidence?: boolean;
+}
+
+/**
+ * Build a descriptive folder name from query params.
+ * e.g., "dod-mit-2024_2025-02-11" or "case-2025-02-11"
+ */
+function buildCaseFolderName(timestamp: string, options?: CaseFolderOptions): string {
+  const parts: string[] = [];
+
+  if (options?.agency) {
+    // Abbreviate common agencies, otherwise take first word
+    const abbrevs: Record<string, string> = {
+      "department of defense": "dod",
+      "department of energy": "doe",
+      "department of state": "dos",
+      "department of health and human services": "hhs",
+      "national aeronautics and space administration": "nasa",
+    };
+    const lower = options.agency.toLowerCase();
+    parts.push(abbrevs[lower] ?? lower.split(/\s+/)[0].slice(0, 8));
+  }
+
+  if (options?.recipient) {
+    // Take first word, lowercase, max 12 chars
+    parts.push(options.recipient.toLowerCase().split(/\s+/)[0].slice(0, 12));
+  }
+
+  const prefix = parts.length > 0 ? parts.join("-") : "case";
+  return `${prefix}-${timestamp}`;
+}
+
 /**
  * Create the case folder structure for an investigation run.
  */
 export async function createCaseFolder(
   baseDir: string,
   timestamp?: string,
+  options?: CaseFolderOptions,
 ): Promise<CaseFolder> {
   const ts = timestamp ?? new Date().toISOString().slice(0, 10);
-  const casePath = join(baseDir, `case-${ts}`);
+  const folderName = buildCaseFolderName(ts, options);
+  const casePath = join(baseDir, folderName);
 
-  const dirs = {
+  const evidenceDir = join(casePath, "evidence");
+  const dataDir = join(casePath, "data");
+  const summaryEvidenceDir = join(evidenceDir, "summary");
+  const detailEvidenceDir = join(evidenceDir, "detail");
+  const chartsDir = join(evidenceDir, "charts");
+
+  const dirs: CaseFolder = {
     path: casePath,
     caseReport: join(casePath, "case.md"),
-    evidenceDir: join(casePath, "evidence"),
+    evidenceDir,
     queriesDir: join(casePath, "queries"),
     analysisDir: join(casePath, "analysis"),
     provenancePath: join(casePath, "provenance.json"),
+    dataDir,
+    summaryEvidenceDir,
+    detailEvidenceDir,
+    chartsDir,
   };
 
-  await mkdir(dirs.evidenceDir, { recursive: true });
+  await mkdir(summaryEvidenceDir, { recursive: true });
+  await mkdir(detailEvidenceDir, { recursive: true });
+  await mkdir(chartsDir, { recursive: true });
   await mkdir(dirs.queriesDir, { recursive: true });
   await mkdir(dirs.analysisDir, { recursive: true });
+  await mkdir(dataDir, { recursive: true });
 
   return dirs;
 }

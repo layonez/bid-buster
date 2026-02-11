@@ -12,7 +12,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type pino from "pino";
 import { mean, median, quantile, standardDeviation } from "simple-statistics";
-import type { Signal, InvestigationFindings, EnrichedHypothesis, CrossReference, ToolCallRecord, Hypothesis } from "../shared/types.js";
+import type { Signal, InvestigationFindings, EnrichedHypothesis, CrossReference, ToolCallRecord, Hypothesis, InvestigationStep, MaterialFinding } from "../shared/types.js";
 import type { NormalizedAward } from "../normalizer/schema.js";
 import type { SamGovClient } from "../enrichment/sam-gov.js";
 import type { SubAwardsClient } from "../enrichment/subawards.js";
@@ -29,12 +29,16 @@ import {
   type FetchComparableAwardsInput,
   type AnalyzeStatisticalPatternInput,
   type LookupAwardDetailInput,
+  type LogReasoningInput,
+  type CreateFindingInput,
   type VerifyEntityOutput,
   type ScreenSanctionsOutput,
   type FetchSubawardsOutput,
   type FetchComparableAwardsOutput,
   type AnalyzeStatisticalPatternOutput,
   type LookupAwardDetailOutput,
+  type LogReasoningOutput,
+  type CreateFindingOutput,
 } from "./tools.js";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -94,15 +98,19 @@ You have access to tools for:
 - **Comparable awards**: Find similar awards from other agencies/recipients for benchmarking
 - **Statistical analysis**: Run deeper statistical analysis on the award dataset
 - **Award details**: Get full details on specific awards
+- **Reasoning log**: Record your analytical thought process at each step (REQUIRED — call before and after each investigation step)
+- **Create finding**: Formally document a material finding using the Five C's framework (Condition, Criteria, Cause, Effect, Recommendation)
 
 ## Investigation Strategy
-1. Start by understanding the signals — what patterns were detected and for which entities
+1. **Log your initial reasoning** — call log_reasoning with phase "hypothesis" to record your initial assessment of the signals
 2. For key entities, verify their SAM.gov registration to understand entity type and status
 3. Fetch comparable awards to establish baselines (is this pattern normal for this sector?)
 4. Use statistical analysis to quantify patterns more precisely
 5. Check sub-awards for large contracts to understand pass-through patterns
 6. Screen high-risk entities against sanctions lists
 7. Cross-reference findings: does entity type explain the competition pattern? Do sub-awards show diversification?
+8. **Create findings** — for each material pattern, call create_finding with the Five C's
+9. **Log your synthesis** — call log_reasoning with phase "synthesis" to summarize your overall assessment
 
 ## Critical Rules
 1. **Non-accusatory language**: NEVER use words like "corrupt", "fraud", "guilty", "criminal", or "illegal"
@@ -223,6 +231,8 @@ function buildToolExecutors(
   awards: NormalizedAward[],
   deps: InvestigatorDeps,
   logger: pino.Logger,
+  reasoningSteps: InvestigationStep[],
+  agentFindings: MaterialFinding[],
 ): ToolExecutorMap {
   return {
     [TOOL_NAMES.VERIFY_ENTITY]: async (input: VerifyEntityInput): Promise<VerifyEntityOutput> => {
@@ -451,6 +461,47 @@ function buildToolExecutors(
 
       return { award: null, source: "not found" };
     },
+
+    [TOOL_NAMES.LOG_REASONING]: async (input: LogReasoningInput): Promise<LogReasoningOutput> => {
+      const step: InvestigationStep = {
+        timestamp: new Date().toISOString(),
+        phase: input.phase,
+        reasoning: input.reasoning,
+        relatedSignals: input.related_signals,
+        relatedEntities: input.related_entities,
+      };
+      reasoningSteps.push(step);
+      logger.info({ phase: input.phase, stepIndex: reasoningSteps.length - 1 }, "Agent reasoning logged");
+      return { logged: true, stepIndex: reasoningSteps.length - 1 };
+    },
+
+    [TOOL_NAMES.CREATE_FINDING]: async (input: CreateFindingInput): Promise<CreateFindingOutput> => {
+      const findingId = `F-${input.indicator_id}-AGENT-${agentFindings.length + 1}`;
+      const finding: MaterialFinding = {
+        id: findingId,
+        entityName: input.entity_name,
+        indicatorId: input.indicator_id,
+        indicatorName: input.indicator_name,
+        severity: input.severity,
+        materialityScore: 0, // Agent findings are scored separately
+        totalDollarValue: 0,
+        signalCount: 0,
+        affectedAwardIds: input.affected_award_ids,
+        signals: [],
+        fiveCs: {
+          condition: input.condition,
+          criteria: input.criteria,
+          cause: input.cause,
+          effect: input.effect,
+          recommendation: input.recommendation,
+        },
+        source: "investigator_agent",
+        aiTag: "AI-DISCOVERED",
+      };
+      agentFindings.push(finding);
+      logger.info({ findingId, entity: input.entity_name }, "Agent created finding");
+      return { created: true, findingId };
+    },
   };
 }
 
@@ -525,8 +576,10 @@ export async function runInvestigativeAgent(input: InvestigatorInput): Promise<I
     return emptyFindings;
   }
 
-  // Build tool executors
-  const executors = buildToolExecutors(awards, deps, logger);
+  // Build tool executors with mutable state containers
+  const reasoningSteps: InvestigationStep[] = [];
+  const agentFindings: MaterialFinding[] = [];
+  const executors = buildToolExecutors(awards, deps, logger, reasoningSteps, agentFindings);
 
   // Build initial prompt
   const initialPrompt = buildInitialPrompt(signals, hypotheses, awards);
@@ -609,6 +662,8 @@ export async function runInvestigativeAgent(input: InvestigatorInput): Promise<I
         toolCallLog,
         iterations,
         estimatedCostUsd: currentCost,
+        reasoningSteps: reasoningSteps.length > 0 ? reasoningSteps : undefined,
+        agentFindings: agentFindings.length > 0 ? agentFindings : undefined,
       };
     }
 
@@ -694,5 +749,7 @@ export async function runInvestigativeAgent(input: InvestigatorInput): Promise<I
     iterations,
     estimatedCostUsd: totalCost,
     summary: `Investigation completed after ${iterations} iterations (max iterations reached). ${toolCallLog.length} tool calls executed.`,
+    reasoningSteps: reasoningSteps.length > 0 ? reasoningSteps : undefined,
+    agentFindings: agentFindings.length > 0 ? agentFindings : undefined,
   };
 }

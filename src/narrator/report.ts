@@ -10,6 +10,7 @@ import type {
   ChartArtifact,
   InvestigationFindings,
   QueryContext,
+  MaterialFinding,
 } from "../shared/types.js";
 import type { SignalEngineResult } from "../signaler/types.js";
 
@@ -22,6 +23,7 @@ export interface ReportData {
   charts?: ChartArtifact[];
   investigationFindings?: InvestigationFindings;
   queryContext?: QueryContext;
+  materialFindings?: MaterialFinding[];
 }
 
 export function assembleReport(data: ReportData): string {
@@ -64,6 +66,53 @@ export function assembleReport(data: ReportData): string {
   lines.push(`- Low severity: ${signalResult.summary.signalsBySeverity.low ?? 0}`);
   lines.push("");
 
+  // ─── Material Findings (inverted pyramid: key findings first) ─────────
+  if (data.materialFindings && data.materialFindings.length > 0) {
+    lines.push("## Material Findings");
+    lines.push("");
+    lines.push(`${data.materialFindings.length} findings ranked by materiality (dollar exposure × severity × signal count):`);
+    lines.push("");
+
+    for (const finding of data.materialFindings) {
+      const tag = finding.aiTag ? ` \`[${finding.aiTag}]\`` : "";
+      const sev = finding.severity === "high" ? "**HIGH**" : finding.severity === "medium" ? "MEDIUM" : "LOW";
+      lines.push(`### ${finding.id}: ${finding.indicatorName} — ${finding.entityName}${tag}`);
+      lines.push(`**Severity:** ${sev} | **Exposure:** $${finding.totalDollarValue.toLocaleString()} | **Awards:** ${finding.affectedAwardIds.length}`);
+      lines.push("");
+
+      if (finding.fiveCs) {
+        lines.push(`**Condition:** ${finding.fiveCs.condition}`);
+        lines.push("");
+        lines.push(`**Criteria:** ${finding.fiveCs.criteria}`);
+        lines.push("");
+        lines.push(`**Cause:** ${finding.fiveCs.cause}`);
+        lines.push("");
+        lines.push(`**Effect:** ${finding.fiveCs.effect}`);
+        lines.push("");
+        lines.push(`**Recommendation:** ${finding.fiveCs.recommendation}`);
+      } else {
+        lines.push(finding.signals[0]?.context ?? "");
+      }
+      lines.push("");
+    }
+  }
+
+  // ─── Investigation Notes (prominent, not appendix) ─────────────────────
+  if (data.investigationFindings?.reasoningSteps && data.investigationFindings.reasoningSteps.length > 0) {
+    lines.push("## Investigation Notes");
+    lines.push("");
+    lines.push("*The Opus 4.6 investigative agent recorded the following reasoning during its analysis:*");
+    lines.push("");
+    for (const step of data.investigationFindings.reasoningSteps) {
+      const phaseLabel =
+        step.phase === "hypothesis" ? "Hypothesis" :
+        step.phase === "data_gathering" ? "Data Gathering" :
+        step.phase === "analysis" ? "Analysis" : "Synthesis";
+      lines.push(`> **[${phaseLabel}]** ${step.reasoning}`);
+      lines.push("");
+    }
+  }
+
   // ─── Data Overview ─────────────────────────────────────────────────────
   lines.push("## Data Overview");
   lines.push("");
@@ -87,9 +136,15 @@ export function assembleReport(data: ReportData): string {
   }
   lines.push("");
 
-  // ─── Signals ───────────────────────────────────────────────────────────
+  // ─── Signals (appendix-style: collapsible for large counts) ───────────
   lines.push("## Signals Detected");
   lines.push("");
+
+  if (signalResult.signals.length > 50) {
+    lines.push(`<details><summary>Show all ${signalResult.signals.length} signals</summary>`);
+    lines.push("");
+  }
+
   lines.push("| # | Indicator | Severity | Entity | Value | Context |");
   lines.push("|---|-----------|----------|--------|-------|---------|");
 
@@ -103,6 +158,10 @@ export function assembleReport(data: ReportData): string {
       `${signal.context.slice(0, 80)}... |`,
     );
   });
+
+  if (signalResult.signals.length > 50) {
+    lines.push("</details>");
+  }
   lines.push("");
 
   // ─── Hypotheses & Evidence ─────────────────────────────────────────────

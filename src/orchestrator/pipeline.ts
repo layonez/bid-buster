@@ -5,15 +5,18 @@
  */
 import type pino from "pino";
 import type { AppConfig } from "../cli/config.js";
-import type { InvestigationParams, InvestigationFindings, ChartArtifact, QueryContext } from "../shared/types.js";
+import type { InvestigationParams, InvestigationFindings, ChartArtifact, QueryContext, MaterialFinding, InvestigationNarrative } from "../shared/types.js";
 import { runCollector } from "../collector/index.js";
 import { USAspendingClient } from "../collector/usaspending.js";
 import { SignalEngine } from "../signaler/engine.js";
+import { consolidateSignals } from "../signaler/consolidator.js";
 import { generateHypotheses } from "../hypothesis/generator.js";
 import { produceEvidence } from "../prover/analyzer.js";
 import { buildCharts } from "../prover/charts.js";
 import { assembleReport } from "../narrator/report.js";
 import { enhanceNarrative } from "../narrator/enhancer.js";
+import { generateBriefing } from "../narrator/briefing.js";
+import { renderNarrative } from "../narrator/narrative.js";
 import { buildDashboard } from "../narrator/dashboard.js";
 import { verifyReport } from "../verifier/checker.js";
 import { runInvestigativeAgent } from "../investigator/agent.js";
@@ -23,7 +26,7 @@ import {
   SubAwardsClient,
 } from "../enrichment/index.js";
 import { createProvenance } from "../shared/provenance.js";
-import { createCaseFolder, writeJson } from "../shared/fs.js";
+import { createCaseFolder, writeJson, sha256 } from "../shared/fs.js";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -32,6 +35,7 @@ export interface PipelineOptions {
   deep?: boolean;
   charts?: boolean;
   noAi?: boolean;
+  fullEvidence?: boolean;
 }
 
 export async function runInvestigation(
@@ -97,6 +101,18 @@ export async function runInvestigation(
     "Signal computation complete",
   );
 
+  // ─── Step 2.5: Consolidate Signals into Material Findings ──────────────
+  let materialFindings = consolidateSignals(
+    signalResult.signals,
+    collectorResult.awards,
+    config.materiality,
+  );
+
+  logger.info(
+    { findings: materialFindings.length, from: signalResult.summary.totalSignals },
+    "Signals consolidated into material findings",
+  );
+
   // ─── Step 3: Investigate (--deep only) ─────────────────────────────────
   let investigationFindings: InvestigationFindings | undefined;
 
@@ -128,6 +144,14 @@ export async function runInvestigation(
       },
       "Investigation complete",
     );
+    // Merge agent-created findings
+    if (investigationFindings.agentFindings && investigationFindings.agentFindings.length > 0) {
+      materialFindings = [...materialFindings, ...investigationFindings.agentFindings];
+      logger.info(
+        { agentFindings: investigationFindings.agentFindings.length },
+        "Agent findings merged into material findings",
+      );
+    }
   } else {
     logger.info(`Step 3/${totalSteps}: Skipping investigative agent (use --deep to enable)`);
   }
@@ -146,7 +170,11 @@ export async function runInvestigation(
   // ─── Step 5: Produce Evidence (CSVs + Charts) ─────────────────────────
   logger.info(`Step 5/${totalSteps}: Producing evidence...`);
 
-  const caseFolder = await createCaseFolder(params.outputDir);
+  const caseFolder = await createCaseFolder(params.outputDir, undefined, {
+    agency: params.agency,
+    recipient: params.recipient,
+    fullEvidence: options.fullEvidence,
+  });
 
   const evidence = await produceEvidence({
     hypotheses,
@@ -154,6 +182,7 @@ export async function runInvestigation(
     awards: collectorResult.awards,
     transactions: collectorResult.transactions,
     evidenceDir: caseFolder.evidenceDir,
+    findings: materialFindings,
   });
 
   logger.info({ artifacts: evidence.length }, "CSV evidence artifacts produced");
@@ -185,6 +214,14 @@ export async function runInvestigation(
   // ─── Step 7: Assemble Report + Dashboard ───────────────────────────────
   logger.info(`Step 7/${totalSteps}: Assembling case report and dashboard...`);
 
+  // Compute file hashes for provenance
+  const signalJson = JSON.stringify(signalResult, null, 2);
+  const findingsJson = JSON.stringify(materialFindings, null, 2);
+  const fileHashes: Record<string, string> = {
+    "signals.json": sha256(signalJson),
+    "findings.json": sha256(findingsJson),
+  };
+
   const provenance = createProvenance(
     params as unknown as Record<string, unknown>,
     [
@@ -196,6 +233,7 @@ export async function runInvestigation(
         cacheHit: collectorResult.raw.cacheHits > 0,
       },
     ],
+    fileHashes,
   );
 
   const report = assembleReport({
@@ -207,6 +245,7 @@ export async function runInvestigation(
     charts,
     investigationFindings,
     queryContext,
+    materialFindings,
   });
 
   // Build interactive dashboard
@@ -237,17 +276,54 @@ export async function runInvestigation(
   );
 
   // ─── Write Case Folder ─────────────────────────────────────────────────
+
+  // Generate executive briefing (README.md)
+  const briefing = generateBriefing({
+    findings: materialFindings,
+    params,
+    queryContext,
+    totalAwards: collectorResult.awards.length,
+    totalSignals: signalResult.summary.totalSignals,
+  });
+  await writeFile(join(caseFolder.path, "README.md"), briefing, "utf-8");
+
+  // Core report files
   await writeFile(caseFolder.caseReport, report, "utf-8");
   await writeFile(join(caseFolder.path, "dashboard.html"), dashboardHtml, "utf-8");
   await writeJson(caseFolder.provenancePath, provenance);
+
+  // Data files -> data/ subdirectory
+  await writeJson(join(caseFolder.dataDir, "signals.json"), signalResult);
+  await writeJson(join(caseFolder.dataDir, "hypotheses.json"), enhancedHypotheses);
+  await writeJson(join(caseFolder.dataDir, "verification.json"), verification);
+  await writeJson(join(caseFolder.dataDir, "awards.json"), collectorResult.awards);
+  await writeJson(join(caseFolder.dataDir, "evidence-manifest.json"), evidence);
+  await writeJson(join(caseFolder.dataDir, "findings.json"), materialFindings);
+
+  // Also keep top-level JSON symlinks for backwards compatibility
   await writeJson(join(caseFolder.path, "signals.json"), signalResult);
   await writeJson(join(caseFolder.path, "hypotheses.json"), enhancedHypotheses);
   await writeJson(join(caseFolder.path, "verification.json"), verification);
-  await writeJson(join(caseFolder.path, "awards.json"), collectorResult.awards);
-  await writeJson(join(caseFolder.path, "evidence-manifest.json"), evidence);
 
   if (investigationFindings) {
-    await writeJson(join(caseFolder.path, "investigation.json"), investigationFindings);
+    await writeJson(join(caseFolder.dataDir, "investigation.json"), investigationFindings);
+
+    // Write investigation narrative if reasoning steps exist
+    if (investigationFindings.reasoningSteps || investigationFindings.agentFindings) {
+      const narrative: InvestigationNarrative = {
+        steps: investigationFindings.reasoningSteps ?? [],
+        agentFindings: investigationFindings.agentFindings ?? [],
+      };
+      const narrativeMd = renderNarrative(narrative);
+      await writeFile(join(caseFolder.path, "investigation-narrative.md"), narrativeMd, "utf-8");
+
+      // Also write the raw conversation log if available
+      await writeJson(join(caseFolder.dataDir, "investigation-conversation.json"), {
+        reasoningSteps: narrative.steps,
+        agentFindings: narrative.agentFindings,
+        toolCallLog: investigationFindings.toolCallLog,
+      });
+    }
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

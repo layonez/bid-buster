@@ -55,6 +55,13 @@ signals:
     zscoreThreshold: 2.0         # >2 standard deviations above mean
     minGroupSize: 5              # Minimum awards per category to compute
 
+# ── Materiality Filtering ────────────────────────────────────────────────────
+
+materiality:
+  minAwardCount: 1                 # Minimum affected awards for a finding
+  minTotalAmount: 0                # Minimum dollar value for a finding
+  maxFindings: 20                  # Maximum material findings to report
+
 # ── Multi-Source Enrichment ──────────────────────────────────────────────────
 
 enrichment:

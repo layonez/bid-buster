@@ -86,6 +86,10 @@ export interface CaseFolder {
   queriesDir: string;
   analysisDir: string;
   provenancePath: string;
+  dataDir: string;
+  summaryEvidenceDir: string;
+  detailEvidenceDir: string;
+  chartsDir: string;
 }
 
 // ─── Query Context (propagated downstream for filter-aware analysis) ─────────
@@ -144,11 +148,13 @@ export interface ChartArtifact {
 // ─── Investigator Types ─────────────────────────────────────────────────────
 
 export interface ToolCallRecord {
+  id?: string;
   toolName: string;
   input: Record<string, unknown>;
   output: Record<string, unknown>;
   durationMs: number;
   cacheHit: boolean;
+  cacheKey?: string;
   timestamp: string;
   error?: string;
 }
@@ -178,6 +184,58 @@ export interface InvestigationFindings {
   iterations: number;
   estimatedCostUsd: number;
   summary: string;
+  reasoningSteps?: InvestigationStep[];
+  agentFindings?: MaterialFinding[];
+}
+
+// ─── Material Finding Types ─────────────────────────────────────────────────
+
+export interface MaterialityConfig {
+  minAwardCount: number;
+  minTotalAmount: number;
+  maxFindings: number;
+}
+
+export interface FiveCsStructure {
+  condition: string;
+  criteria: string;
+  cause: string;
+  effect: string;
+  recommendation: string;
+}
+
+export type FindingSource = "signal_consolidation" | "investigator_agent";
+
+export interface MaterialFinding {
+  id: string;
+  entityName: string;
+  indicatorId: string;
+  indicatorName: string;
+  severity: Severity;
+  materialityScore: number;
+  totalDollarValue: number;
+  signalCount: number;
+  affectedAwardIds: string[];
+  signals: Signal[];
+  fiveCs?: FiveCsStructure;
+  source: FindingSource;
+  aiTag?: "RULE" | "AI-ENHANCED" | "AI-DISCOVERED";
+}
+
+// ─── Investigation Narrative Types ──────────────────────────────────────────
+
+export interface InvestigationStep {
+  timestamp: string;
+  phase: "hypothesis" | "data_gathering" | "analysis" | "synthesis";
+  reasoning: string;
+  relatedSignals?: string[];
+  relatedEntities?: string[];
+}
+
+export interface InvestigationNarrative {
+  steps: InvestigationStep[];
+  agentFindings: MaterialFinding[];
+  conversationLog?: unknown[];
 }
 
 // ─── Dashboard Types ────────────────────────────────────────────────────────

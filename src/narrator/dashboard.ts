@@ -47,6 +47,7 @@ export function buildDashboard(data: DashboardData): string {
     investigationFindings,
   } = data;
 
+  const awardCount = data.awards.length;
   const nonExecHypotheses = hypotheses.filter((h) => h.id !== "H-EXECUTIVE");
   const execHypothesis = hypotheses.find((h) => h.id === "H-EXECUTIVE");
   const highCount = signals.filter((s) => s.severity === "high").length;
@@ -109,7 +110,7 @@ ${buildStyles()}
         <div class="summary-label">Low Severity</div>
       </div>
       <div class="summary-card">
-        <div class="summary-value">${data.awards.length}</div>
+        <div class="summary-value">${awardCount}</div>
         <div class="summary-label">Awards Analyzed</div>
       </div>
       <div class="summary-card">
@@ -171,9 +172,28 @@ ${buildStyles()}
   </footer>
 </div>
 
-<!-- ─── Inline Data ──────────────────────────────────────────────────── -->
+<!-- ─── Inline Data (lightweight: awards excluded to reduce file size) ── -->
 <script>
-  window.__DASHBOARD_DATA__ = ${escapeJsonForScript(data)};
+  window.__DASHBOARD_DATA__ = ${escapeJsonForScript({
+    title: data.title,
+    generatedAt: data.generatedAt,
+    params: data.params,
+    signals: data.signals,
+    hypotheses: data.hypotheses,
+    evidence: data.evidence,
+    charts: data.charts,
+    provenance: data.provenance,
+    investigationFindings: data.investigationFindings
+      ? {
+          summary: data.investigationFindings.summary,
+          iterations: data.investigationFindings.iterations,
+          toolCallLog: data.investigationFindings.toolCallLog,
+          crossReferences: data.investigationFindings.crossReferences,
+          estimatedCostUsd: data.investigationFindings.estimatedCostUsd,
+        }
+      : undefined,
+    awardCount: data.awards.length,
+  })};
 </script>
 
 <!-- ─── Chart Rendering ──────────────────────────────────────────────── -->
@@ -196,7 +216,11 @@ ${buildChartScripts(charts)}
 // ─── Section Builders ───────────────────────────────────────────────────────
 
 function buildSignalTable(signals: Signal[]): string {
-  const rows = signals
+  const PAGE_SIZE = 50;
+  const initialSignals = signals.slice(0, PAGE_SIZE);
+  const hasMore = signals.length > PAGE_SIZE;
+
+  const rows = initialSignals
     .map((s, i) => {
       const badge = severityBadge(s.severity);
       return `<tr>
@@ -211,6 +235,29 @@ function buildSignalTable(signals: Signal[]): string {
     })
     .join("\n");
 
+  const hiddenRows = hasMore
+    ? signals.slice(PAGE_SIZE).map((s, i) => {
+        const badge = severityBadge(s.severity);
+        return `<tr class="signal-hidden" style="display:none">
+          <td>${PAGE_SIZE + i + 1}</td>
+          <td>${badge}</td>
+          <td><code>${escapeHtml(s.indicatorId)}</code> ${escapeHtml(s.indicatorName)}</td>
+          <td>${escapeHtml(s.entityName)}</td>
+          <td class="num">${s.value}</td>
+          <td class="num">${s.threshold}</td>
+          <td>${escapeHtml(s.context)}</td>
+        </tr>`;
+      }).join("\n")
+    : "";
+
+  const loadMoreBtn = hasMore
+    ? `<button id="load-more-signals" style="margin-top:12px;padding:8px 16px;cursor:pointer;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg);">Show remaining ${signals.length - PAGE_SIZE} signals</button>
+       <script>document.getElementById('load-more-signals').addEventListener('click', function() {
+         document.querySelectorAll('.signal-hidden').forEach(function(el) { el.style.display = ''; });
+         this.remove();
+       });</script>`
+    : "";
+
   return `<div class="table-wrapper">
     <table>
       <thead>
@@ -224,9 +271,10 @@ function buildSignalTable(signals: Signal[]): string {
           <th>Context</th>
         </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rows}${hiddenRows}</tbody>
     </table>
-  </div>`;
+  </div>
+  ${loadMoreBtn}`;
 }
 
 function buildChartsSection(charts: { id: string; title: string; description: string }[]): string {

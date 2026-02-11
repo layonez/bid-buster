@@ -5,7 +5,7 @@
  */
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Signal, Hypothesis, EvidenceArtifact } from "../shared/types.js";
+import type { Signal, Hypothesis, EvidenceArtifact, MaterialFinding } from "../shared/types.js";
 import type { NormalizedAward, Transaction } from "../normalizer/schema.js";
 import type { SignalEngineResult } from "../signaler/types.js";
 
@@ -15,6 +15,7 @@ export interface ProverInput {
   awards: NormalizedAward[];
   transactions: Map<string, Transaction[]>;
   evidenceDir: string;
+  findings?: MaterialFinding[];
 }
 
 /**
