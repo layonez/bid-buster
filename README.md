@@ -17,12 +17,14 @@ npx investigate run \
   --period=2023-01-01:2023-12-31
 
 # Output: cases/case-YYYY-MM-DD/
-#   case.md           - Full investigation report
-#   signals.json      - Red-flag signal data
-#   hypotheses.json   - Generated hypotheses
-#   verification.json - Claim verification results
-#   awards.json       - Normalized procurement data
-#   provenance.json   - Audit trail
+#   case.md                - Full investigation report
+#   signals.json           - Red-flag signal data
+#   hypotheses.json        - Generated hypotheses
+#   verification.json      - Claim verification results
+#   awards.json            - Normalized procurement data
+#   evidence-manifest.json - Evidence artifact references
+#   evidence/              - CSV evidence tables per hypothesis
+#   provenance.json        - Audit trail
 ```
 
 ## What It Does
@@ -31,13 +33,15 @@ npx investigate run \
 investigate run --agency=<name> --period=<start:end> [--recipient=<name>]
 ```
 
-The tool runs a 5-step pipeline:
+The tool runs a 7-step pipeline:
 
 1. **Collect** -- Fetches award data from USAspending API (pagination, caching, detail enrichment)
 2. **Signal** -- Computes 6 red-flag indicators based on OCP/OECD methodology
 3. **Hypothesize** -- Generates non-accusatory hypotheses + AI executive assessment (Claude)
-4. **Report** -- Assembles `case.md` with disclaimer, signals, hypotheses, methodology, provenance
-5. **Verify** -- Cross-checks every claim in the report against computed evidence
+4. **Prove** -- Produces CSV evidence tables per hypothesis in `evidence/` directory
+5. **Enhance** -- AI-refined per-hypothesis narrative with balanced analysis (Claude Sonnet)
+6. **Report** -- Assembles `case.md` with disclaimer, signals, hypotheses, evidence links, provenance
+7. **Verify** -- Cross-checks every claim in the report against computed evidence
 
 ## Red-Flag Indicators
 
@@ -73,13 +77,15 @@ investigate signal --input=.cache/normalized/awards.json [--format=json]
 CLI (commander)
   │
   ▼
-Orchestrator ──→ 5-step pipeline
+Orchestrator ──→ 7-step pipeline
   │
   ├─ 1. Collector    → USAspending API (fetch, paginate, cache)
   ├─ 2. Signaler     → 6 indicators (fold/finalize pattern)
   ├─ 3. Hypothesis   → Templates + Claude AI enhancement
-  ├─ 4. Narrator     → case.md assembly with footnotes
-  └─ 5. Verifier     → Claim ↔ evidence cross-check
+  ├─ 4. Prover       → CSV evidence tables per hypothesis
+  ├─ 5. Enhancer     → AI-refined per-hypothesis narrative (Claude Sonnet)
+  ├─ 6. Narrator     → case.md assembly with evidence links
+  └─ 7. Verifier     → Claim ↔ evidence cross-check
 ```
 
 **Multi-agent design** with clear separation of concerns. Each agent can be run independently or as part of the full pipeline.
@@ -128,7 +134,7 @@ signals:
 
 ```bash
 npm install          # Install dependencies
-npm test             # Run 24 unit tests
+npm test             # Run 62 unit tests
 npm run typecheck    # TypeScript strict check
 npm run dev -- --help # Run CLI in dev mode
 ```

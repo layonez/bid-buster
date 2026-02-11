@@ -24,6 +24,50 @@ const AI_DEFAULTS = {
   model: "claude-opus-4-6-20250219",
 } as const;
 
+const ENRICHMENT_DEFAULTS = {
+  samGov: {
+    enabled: true,
+    baseUrl: "https://api.sam.gov/entity-information/v3/entities",
+    exclusionsUrl: "https://api.sam.gov/entity-information/v4/exclusions",
+    requestsPerSecond: 1,
+    maxRetries: 2,
+  },
+  openSanctions: {
+    enabled: true,
+    baseUrl: "https://api.opensanctions.org",
+    dataset: "default" as const,
+    scoreThreshold: 0.7,
+    maxRetries: 2,
+  },
+  subAwards: {
+    enabled: true,
+    maxPerAward: 100,
+  },
+} as const;
+
+const INVESTIGATOR_DEFAULTS = {
+  enabled: true,
+  model: "claude-opus-4-6-20250219",
+  maxIterations: 10,
+  maxTokensPerTurn: 4096,
+  maxCostUsd: 2.0,
+  toolChoice: "auto" as const,
+} as const;
+
+const CHARTS_DEFAULTS = {
+  enabled: true,
+  width: 600,
+  height: 400,
+  types: {
+    awardDistribution: true,
+    vendorConcentration: true,
+    competitionBreakdown: true,
+    priceOutlier: true,
+    modificationTimeline: true,
+    thresholdClustering: true,
+  },
+} as const;
+
 const SIGNAL_DEFAULTS = {
   R001_single_bid: {
     enabled: true,
@@ -79,6 +123,58 @@ const AiSchema = z.object({
   model: z.string().optional(),
 });
 
+const SamGovSchema = z.object({
+  enabled: z.boolean().optional(),
+  baseUrl: z.string().optional(),
+  exclusionsUrl: z.string().optional(),
+  requestsPerSecond: z.number().optional(),
+  maxRetries: z.number().optional(),
+});
+
+const OpenSanctionsSchema = z.object({
+  enabled: z.boolean().optional(),
+  baseUrl: z.string().optional(),
+  dataset: z.enum(["default", "sanctions", "peps", "us_sanctions"]).optional(),
+  scoreThreshold: z.number().min(0).max(1).optional(),
+  maxRetries: z.number().optional(),
+});
+
+const SubAwardsSchema = z.object({
+  enabled: z.boolean().optional(),
+  maxPerAward: z.number().optional(),
+});
+
+const EnrichmentSchema = z.object({
+  samGov: SamGovSchema.optional(),
+  openSanctions: OpenSanctionsSchema.optional(),
+  subAwards: SubAwardsSchema.optional(),
+});
+
+const InvestigatorSchema = z.object({
+  enabled: z.boolean().optional(),
+  model: z.string().optional(),
+  maxIterations: z.number().min(1).max(50).optional(),
+  maxTokensPerTurn: z.number().optional(),
+  maxCostUsd: z.number().optional(),
+  toolChoice: z.enum(["auto", "any", "none"]).optional(),
+});
+
+const ChartTypesSchema = z.object({
+  awardDistribution: z.boolean().optional(),
+  vendorConcentration: z.boolean().optional(),
+  competitionBreakdown: z.boolean().optional(),
+  priceOutlier: z.boolean().optional(),
+  modificationTimeline: z.boolean().optional(),
+  thresholdClustering: z.boolean().optional(),
+});
+
+const ChartsSchema = z.object({
+  enabled: z.boolean().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  types: ChartTypesSchema.optional(),
+});
+
 const IndicatorSchema = z.object({
   enabled: z.boolean().optional(),
 }).passthrough();
@@ -97,6 +193,9 @@ const RawConfigSchema = z.object({
   cache: CacheSchema.optional(),
   ai: AiSchema.optional(),
   signals: SignalSchema.optional(),
+  enrichment: EnrichmentSchema.optional(),
+  investigator: InvestigatorSchema.optional(),
+  charts: ChartsSchema.optional(),
 });
 
 // ─── Resolved config type ────────────────────────────────────────────────────
@@ -124,6 +223,47 @@ export interface AppConfig {
     R005_modifications: { enabled: boolean; maxModificationCount: number; maxGrowthRatio: number };
     R006_price_outliers: { enabled: boolean; method: "iqr" | "zscore"; iqrMultiplier: number; zscoreThreshold: number; minGroupSize: number };
   };
+  enrichment: {
+    samGov: {
+      enabled: boolean;
+      baseUrl: string;
+      exclusionsUrl: string;
+      requestsPerSecond: number;
+      maxRetries: number;
+    };
+    openSanctions: {
+      enabled: boolean;
+      baseUrl: string;
+      dataset: "default" | "sanctions" | "peps" | "us_sanctions";
+      scoreThreshold: number;
+      maxRetries: number;
+    };
+    subAwards: {
+      enabled: boolean;
+      maxPerAward: number;
+    };
+  };
+  investigator: {
+    enabled: boolean;
+    model: string;
+    maxIterations: number;
+    maxTokensPerTurn: number;
+    maxCostUsd: number;
+    toolChoice: "auto" | "any" | "none";
+  };
+  charts: {
+    enabled: boolean;
+    width: number;
+    height: number;
+    types: {
+      awardDistribution: boolean;
+      vendorConcentration: boolean;
+      competitionBreakdown: boolean;
+      priceOutlier: boolean;
+      modificationTimeline: boolean;
+      thresholdClustering: boolean;
+    };
+  };
 }
 
 function deepMerge<T extends Record<string, unknown>>(defaults: T, overrides?: Record<string, unknown>): T {
@@ -149,6 +289,16 @@ function resolveConfig(raw: z.infer<typeof RawConfigSchema>): AppConfig {
       R004_concentration: deepMerge(SIGNAL_DEFAULTS.R004_concentration, raw.signals?.R004_concentration),
       R005_modifications: deepMerge(SIGNAL_DEFAULTS.R005_modifications, raw.signals?.R005_modifications),
       R006_price_outliers: deepMerge(SIGNAL_DEFAULTS.R006_price_outliers, raw.signals?.R006_price_outliers),
+    },
+    enrichment: {
+      samGov: deepMerge(ENRICHMENT_DEFAULTS.samGov, raw.enrichment?.samGov),
+      openSanctions: deepMerge(ENRICHMENT_DEFAULTS.openSanctions, raw.enrichment?.openSanctions),
+      subAwards: deepMerge(ENRICHMENT_DEFAULTS.subAwards, raw.enrichment?.subAwards),
+    },
+    investigator: deepMerge(INVESTIGATOR_DEFAULTS, raw.investigator),
+    charts: {
+      ...deepMerge(CHARTS_DEFAULTS, raw.charts),
+      types: deepMerge(CHARTS_DEFAULTS.types, raw.charts?.types),
     },
   };
 }

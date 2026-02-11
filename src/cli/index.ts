@@ -27,4 +27,4 @@ program.addCommand(investigateCommand);
 program.addCommand(fetchCommand);
 program.addCommand(signalCommand);
 
-program.parse();
+await program.parseAsync();

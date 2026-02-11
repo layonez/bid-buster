@@ -54,3 +54,46 @@ signals:
     iqrMultiplier: 1.5           # Q3 + 1.5*IQR (standard outlier detection)
     zscoreThreshold: 2.0         # >2 standard deviations above mean
     minGroupSize: 5              # Minimum awards per category to compute
+
+# ── Multi-Source Enrichment ──────────────────────────────────────────────────
+
+enrichment:
+  samGov:
+    enabled: true
+    baseUrl: "https://api.sam.gov/entity-information/v3/entities"
+    exclusionsUrl: "https://api.sam.gov/entity-information/v4/exclusions"
+    requestsPerSecond: 1         # Conservative: free tier is 10 req/day
+    maxRetries: 2
+  openSanctions:
+    enabled: true
+    baseUrl: "https://api.opensanctions.org"
+    dataset: "default"           # "default", "sanctions", "peps", "us_sanctions"
+    scoreThreshold: 0.7          # Fuzzy match threshold (0.0-1.0)
+    maxRetries: 2
+  subAwards:
+    enabled: true
+    maxPerAward: 100             # Max sub-awards to fetch per prime award
+
+# ── Opus 4.6 Investigative Agent ─────────────────────────────────────────────
+
+investigator:
+  enabled: true
+  model: "claude-opus-4-6-20250219"
+  maxIterations: 10              # Max reasoning loops before forced stop
+  maxTokensPerTurn: 4096         # Agent needs room to reason
+  maxCostUsd: 2.00               # Safety cap on estimated API cost
+  toolChoice: "auto"             # "auto", "any", "none"
+
+# ── Vega-Lite Charts ─────────────────────────────────────────────────────────
+
+charts:
+  enabled: true
+  width: 600
+  height: 400
+  types:
+    awardDistribution: true      # Histogram of award amounts
+    vendorConcentration: true    # Pie chart of vendor shares
+    competitionBreakdown: true   # Bar chart of competition types
+    priceOutlier: true           # Scatter plot with outliers highlighted
+    modificationTimeline: true   # Timeline of contract modifications
+    thresholdClustering: true    # Distribution near regulatory thresholds

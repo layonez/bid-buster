@@ -23,8 +23,8 @@ export const fetchCommand = new Command("fetch")
   .option("--page-limit <n>", "Maximum pages to fetch", "100")
   .option("--with-details", "Fetch individual award details", false)
   .option("--with-transactions", "Fetch modification history", false)
-  .action(async (options) => {
-    const parentOpts = options.parent?.parent?.opts() ?? {};
+  .action(async (options, command) => {
+    const parentOpts = command.parent?.opts() ?? {};
     const config = await loadConfig(parentOpts.config);
     const logger = createLogger(parentOpts.verbose);
 

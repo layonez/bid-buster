@@ -16,8 +16,8 @@ export const signalCommand = new Command("signal")
     "Comma-separated indicator IDs to run (default: all enabled)",
   )
   .option("--format <type>", "Output format: table, json", "table")
-  .action(async (options) => {
-    const parentOpts = options.parent?.parent?.opts() ?? {};
+  .action(async (options, command) => {
+    const parentOpts = command.parent?.opts() ?? {};
     const config = await loadConfig(parentOpts.config);
     const logger = createLogger(parentOpts.verbose);
 
