@@ -1,814 +1,388 @@
 # Procurement Investigator - Project Plan
 
+> **Last updated:** 2026-02-11
+> **Current stage:** MVP complete (Phases 0-6 done). Ready for enhancement.
+
 ## Executive Summary
 
-Build **`investigate`**, a TypeScript CLI tool that converts slices of public procurement data (USAspending) into **auditable case files** with red-flag signals, hypotheses, evidence, and open questions. The tool uses a multi-agent architecture orchestrated by Claude Opus 4.6 to demonstrate frontier model capabilities at Anthropic's hackathon.
+**`investigate`** is a TypeScript CLI tool that converts slices of public procurement data (USAspending) into **auditable case files** with red-flag signals, hypotheses, evidence, and open questions. It uses a multi-agent architecture with optional Claude AI enhancement.
 
-**Key differentiator:** Investigation-as-Code -- every finding is reproducible, every claim links to evidence, every run produces a git-committable case folder.
-
----
-
-## Phase Overview
-
-| Phase | Name | Deliverable | Artifact |
-|-------|------|-------------|----------|
-| 0 | API Discovery & Data Exploration | Live API analysis, field mapping, sample data | `docs/api-analysis.md`, `exploration/` |
-| 1 | Repository Setup & Scaffolding | TypeScript project, CLI skeleton, config system | Working `investigate --help` |
-| 2 | Collector Agent (Data Ingestion) | Paginated API client, caching, snapshots | `investigate fetch --agency=DoD --recipient=MIT` |
-| 3 | Signaler Agent (Red-Flag Engine) | 6 MVP indicators with configurable thresholds | Signal table output |
-| 4 | Hypothesis + Prover Agents | AI-generated hypotheses, evidence tables/charts | `evidence/` folder with artifacts |
-| 5 | Verifier + Narrator Agents | Claim verification, case.md assembly | Complete case folder |
-| 6 | Integration & Demo | End-to-end pipeline, demo case | Hackathon-ready demo |
+**Key differentiator:** Investigation-as-Code -- every finding is reproducible, every claim is verified against computed evidence, every run produces a git-committable case folder.
 
 ---
 
-## Phase 0: API Discovery & Data Exploration
+## Current Implementation Status
 
-**Goal:** Understand the actual data we'll work with. Make real API calls, inspect responses, map fields to red-flag indicators.
+### What's Built and Working
 
-### Tasks
+| Component | Files | Lines | Status |
+|-----------|-------|-------|--------|
+| CLI (commander) | 5 | ~405 | Complete -- 3 commands: `run`, `fetch`, `signal` |
+| Collector (API client) | 4 | ~679 | Complete -- pagination, throttling, caching, detail enrichment |
+| Normalizer | 3 | ~167 | Complete -- search results, award details, transactions |
+| Signaler (6 indicators) | 9 | ~1,039 | Complete -- all 6 indicators with configurable thresholds |
+| Hypothesis Maker | 2 | ~214 | Complete -- templates + Claude AI executive assessment |
+| Narrator | 1 | ~156 | Complete -- full case.md with disclaimer, methodology, provenance |
+| Verifier | 1 | ~103 | Complete -- 10-point claim-evidence cross-check |
+| Orchestrator | 1 | ~118 | Complete -- 5-step pipeline: Collect → Signal → Hypothesize → Report → Verify |
+| Shared utilities | 4 | ~224 | Complete -- logger, fs, provenance, types |
+| **Total** | **31 files** | **~3,100 lines** | **30/31 fully implemented (97%)** |
 
-1. **Explore USAspending endpoints with live calls**
-   - Hit `/api/v2/search/spending_by_award/` with sample filters (DoD + MIT)
-   - Hit `/api/v2/awards/{id}/` for individual award detail (competition data, offers received)
-   - Hit `/api/v2/transactions/` for modification history
-   - Hit `/api/v2/search/spending_by_category/recipient` for vendor concentration
-   - Save raw responses to `exploration/` folder
+**One stub remaining:** `src/prover/analyzer.ts` (evidence chart/table generation -- stretch goal).
 
-2. **Map API fields to red-flag indicators**
-   - For each of the 6 MVP indicators, confirm which endpoint + field provides the data
-   - Document data gaps and workarounds
-   - Identify which fields require individual award detail calls vs. search-level data
+### Test Suite
 
-3. **Estimate data volumes for our target slice**
-   - DoD → MIT: ~500 prime awards (manageable for MVP)
-   - Test pagination mechanics (100 per page, cursor-based for >10K)
-   - Measure API response times to calibrate throttling
+| Test File | Tests | What It Covers |
+|-----------|-------|----------------|
+| `config.test.ts` | 3 | Config loading, defaults, threshold merging |
+| `indicators.test.ts` | 9 | R001 (single-bid), R002 (non-competitive), R003 (splitting), R004 (concentration), R006 (price outliers) |
+| `engine.test.ts` | 3 | Engine initialization, indicator filtering, severity sorting |
+| `hypothesis.test.ts` | 4 | Template generation, non-accusatory language, deduplication |
+| `report.test.ts` | 5 | Disclaimer, signal table, hypotheses, provenance, methodology refs |
+| **Total** | **24** | **All passing** |
 
-4. **Document findings**
+### Validated on Real Data
 
-### Artifact
-- `docs/api-analysis.md` -- field-to-indicator mapping, endpoint strategy, data volume estimates
-- `exploration/` -- raw sample responses from each endpoint
+**Demo slice:** Department of Defense → MIT, FY2023
+- 54 awards fetched and cached from USAspending API
+- 54 award details enriched (competition data, offers received, pricing type)
+- **3 signals detected:**
+  - R004 **HIGH**: 100% vendor concentration ($11.4B across 54 awards)
+  - R002 **MEDIUM**: 79.6% non-competitive awards (43/54)
+  - R006 **MEDIUM**: 1 price outlier at 3.7x NAICS category mean
+- **4 hypotheses generated** (3 templates + 1 AI executive assessment)
+- **10/10 claims verified** (verification passed)
+- AI executive assessment correctly identified MIT Lincoln Lab as a likely UARC arrangement
 
----
-
-## Phase 1: Repository Setup & Scaffolding
-
-**Goal:** Set up a production-quality TypeScript monorepo with CLI, config system, and module boundaries.
-
-### Technology Choices
-
-| Concern | Choice | Rationale |
-|---------|--------|-----------|
-| Runtime | Node.js 20+ | LTS, native fetch, good TypeScript support |
-| Language | TypeScript 5.x (strict mode) | Required by hackathon team |
-| CLI Framework | `commander` | Most popular, well-maintained, excellent TypeScript types |
-| HTTP Client | Native `fetch` + `p-retry` + `p-throttle` | No heavy deps; `p-retry` for backoff, `p-throttle` for rate limiting |
-| Config | `cosmiconfig` + `zod` | Config file discovery + runtime validation |
-| Testing | `vitest` | Fast, native ESM + TypeScript, Jest-compatible API |
-| Logging | `pino` | Structured JSON logging, fast, low overhead |
-| Data Processing | Built-in + `simple-statistics` | Quartile/percentile calculations for indicators |
-| AI/LLM | `@anthropic-ai/sdk` | Claude API for hypothesis generation and narration |
-| Charts | `vega-lite` (JSON spec) + `vl-convert` | Reproducible chart specs, SVG/PNG export |
-| Markdown | `unified` + `remark` | Programmatic markdown generation and manipulation |
-
-### Project Structure
+### Git History
 
 ```
-bid-buster/
-├── src/
-│   ├── cli/                    # CLI entry point and commands
-│   │   ├── index.ts            # Main entry, commander setup
-│   │   ├── commands/
-│   │   │   ├── investigate.ts  # Main investigation command
-│   │   │   ├── fetch.ts        # Data collection only
-│   │   │   └── signal.ts       # Run signals only (on cached data)
-│   │   └── config.ts           # Config loading + validation (zod)
-│   │
-│   ├── collector/              # Collector Agent
-│   │   ├── usaspending.ts      # USAspending API client
-│   │   ├── paginator.ts        # Pagination + cursor handling
-│   │   ├── cache.ts            # Request/response caching
-│   │   ├── snapshot.ts         # Snapshot management
-│   │   └── types.ts            # API response types
-│   │
-│   ├── normalizer/             # Data normalization layer
-│   │   ├── awards.ts           # Normalize award records
-│   │   ├── transactions.ts     # Normalize modification records
-│   │   └── schema.ts           # Internal canonical schema (zod)
-│   │
-│   ├── signaler/               # Signaler Agent
-│   │   ├── engine.ts           # Signal computation engine
-│   │   ├── indicators/         # Individual indicator modules
-│   │   │   ├── base.ts         # Indicator interface (fold/reduce/finalize)
-│   │   │   ├── single-bid.ts   # R001: Single-bid competitions
-│   │   │   ├── non-competitive.ts # R002: Non-competitive awards
-│   │   │   ├── splitting.ts    # R003: Contract value splitting
-│   │   │   ├── concentration.ts # R004: Vendor concentration
-│   │   │   ├── modifications.ts # R005: Excessive modifications
-│   │   │   └── price-outliers.ts # R006: Price outliers
-│   │   ├── config.ts           # Indicator thresholds + params
-│   │   └── types.ts            # Signal output types
-│   │
-│   ├── hypothesis/             # Hypothesis Maker Agent
-│   │   ├── generator.ts        # Template-based hypothesis generation
-│   │   ├── templates.ts        # Non-accusatory language templates
-│   │   └── ai-enhance.ts      # Claude API for narrative refinement
-│   │
-│   ├── prover/                 # Prover Agent
-│   │   ├── analyzer.ts         # Statistical analysis runner
-│   │   ├── charts.ts           # Chart generation (vega-lite specs)
-│   │   ├── tables.ts           # Evidence table generation
-│   │   └── types.ts            # Evidence artifact types
-│   │
-│   ├── verifier/               # Verifier Agent
-│   │   ├── checker.ts          # Claim-evidence cross-reference
-│   │   └── types.ts            # Verification result types
-│   │
-│   ├── narrator/               # Narrator Agent
-│   │   ├── report.ts           # case.md assembly
-│   │   ├── sections.ts         # Section generators
-│   │   └── disclaimer.ts       # Ethical disclaimers and caveats
-│   │
-│   ├── orchestrator/           # Agent orchestration
-│   │   ├── pipeline.ts         # Sequential pipeline runner
-│   │   └── context.ts          # Shared investigation context
-│   │
-│   └── shared/                 # Shared utilities
-│       ├── logger.ts           # Pino logger setup
-│       ├── fs.ts               # File system helpers
-│       └── provenance.ts       # provenance.json generation
+bd46b7a Add verifier agent, AI enhancement, README, and MIT license
+a0446c3 Phase 4-5: Hypothesis generation, report assembly, and full pipeline
+abbfe9f Phase 2-3: Collector agent with live API + signal command wired to real data
+344ebef Phase 1: TypeScript scaffolding, CLI, and 6 red-flag indicators
+b4d3f10 Phase 0: Project plan, API exploration, and hackathon brief
+a795bb9 Add knowledge base documents and reference repositories
+9cdde71 first commit
+```
+
+---
+
+## Architecture
+
+### 5-Step Pipeline
+
+```
+investigate run --agency=<name> --period=<start:end> [--recipient=<name>]
+
+  Step 1: COLLECT    USAspending API → paginate → cache → normalize
+  Step 2: SIGNAL     6 indicators × fold/finalize → signal table
+  Step 3: HYPOTHESIZE  templates + Claude AI → non-accusatory questions
+  Step 4: REPORT     case.md with disclaimer, signals, hypotheses, methodology
+  Step 5: VERIFY     10-point claim-evidence cross-check → pass/fail
+```
+
+### Source Layout (actual)
+
+```
+src/
+├── cli/                          # CLI entry point + commands
+│   ├── index.ts                  # Entry, dotenv, commander setup
+│   ├── config.ts                 # Config schema + defaults merging
+│   └── commands/
+│       ├── investigate.ts        # `run` -- full pipeline
+│       ├── fetch.ts              # `fetch` -- data collection only
+│       └── signal.ts             # `signal` -- indicators on cached data
 │
-├── config/
-│   └── default.yaml            # Default configuration
+├── collector/                    # Collector Agent
+│   ├── index.ts                  # Orchestrates collection + normalization
+│   ├── usaspending.ts            # API client (pagination, throttle, retry, cache)
+│   ├── cache.ts                  # File-based SHA-256-keyed response cache
+│   └── types.ts                  # Full USAspending API type definitions
 │
-├── tests/
-│   ├── unit/                   # Unit tests per module
-│   ├── integration/            # Integration tests
-│   └── fixtures/               # Test fixtures (sample API responses)
+├── normalizer/                   # Data normalization
+│   ├── schema.ts                 # NormalizedAward + Transaction (zod schemas)
+│   ├── awards.ts                 # Search result + detail enrichment transforms
+│   └── transactions.ts           # Transaction/modification normalization
 │
-├── docs/                       # Documentation
-├── references/                 # Reference repos
-├── exploration/                # Phase 0 API exploration data
+├── signaler/                     # Signaler Agent
+│   ├── engine.ts                 # Orchestrates all indicators, sorts by severity
+│   ├── types.ts                  # Indicator interface, SignalEngineResult
+│   └── indicators/
+│       ├── base.ts               # BaseIndicator abstract (fold/finalize pattern)
+│       ├── single-bid.ts         # R001: competitive tenders with 1 bidder
+│       ├── non-competitive.ts    # R002: awards bypassing open competition
+│       ├── splitting.ts          # R003: clusters near regulatory thresholds
+│       ├── concentration.ts      # R004: dominant supplier detection
+│       ├── modifications.ts      # R005: excessive post-award changes
+│       └── price-outliers.ts     # R006: IQR/z-score outlier detection
 │
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
-└── README.md
+├── hypothesis/                   # Hypothesis Maker Agent
+│   ├── generator.ts              # Template + Claude AI enhancement
+│   └── templates.ts              # 6 indicator-specific non-accusatory templates
+│
+├── prover/                       # Prover Agent (stub)
+│   └── analyzer.ts               # TODO: evidence chart/table generation
+│
+├── verifier/                     # Verifier Agent
+│   └── checker.ts                # 10-point claim-evidence cross-check
+│
+├── narrator/                     # Narrator Agent
+│   └── report.ts                 # case.md assembly (all sections)
+│
+├── orchestrator/                 # Pipeline orchestration
+│   └── pipeline.ts               # 5-step sequential pipeline runner
+│
+└── shared/                       # Shared utilities
+    ├── types.ts                  # Signal, Hypothesis, Evidence, Provenance, etc.
+    ├── logger.ts                 # Pino structured logging
+    ├── fs.ts                     # Case folder creation, JSON I/O, SHA-256
+    └── provenance.ts             # Git commit, timestamps, versioning
 ```
 
-### Tasks
+### Case Folder Output
 
-1. **Initialize TypeScript project**
-   - `package.json` with ESM configuration
-   - `tsconfig.json` with strict mode
-   - Vitest configuration
-   - ESLint + Prettier (minimal config)
+Each run of `investigate run` produces:
 
-2. **Set up CLI skeleton**
-   - Commander-based CLI with `investigate`, `fetch`, `signal` subcommands
-   - Global options: `--config`, `--output`, `--verbose`, `--dry-run`
-   - Config loading with cosmiconfig + zod validation
-
-3. **Define core types and interfaces**
-   - Indicator interface (inspired by Cardinal's `Calculate` trait):
-     ```typescript
-     interface Indicator {
-       id: string;
-       name: string;
-       description: string;
-       configure(settings: IndicatorSettings): void;
-       fold(record: NormalizedAward): void;
-       reduce(other: IndicatorState): void;
-       finalize(): Signal[];
-     }
-     ```
-   - Normalized award schema (zod)
-   - Signal output type
-   - Case folder structure types
-
-4. **Set up logging and provenance**
-   - Structured logging with pino
-   - Provenance metadata collection (timestamps, versions, git hash)
-
-### Artifact
-- Working `npx investigate --help` command
-- All module stubs with interfaces defined
-- Passing `vitest` with placeholder tests
+```
+cases/case-YYYY-MM-DD/
+├── case.md              # Full investigation report (markdown)
+├── signals.json         # Structured signal data
+├── hypotheses.json      # Generated hypotheses with evidence needs
+├── verification.json    # Claim-by-claim verification results
+├── awards.json          # Normalized award data (full dataset)
+├── provenance.json      # Audit trail (timestamp, git hash, versions)
+├── evidence/            # (future: charts, tables, CSV extracts)
+├── queries/             # (future: raw API request/response pairs)
+└── analysis/            # (future: reproducible analysis scripts)
+```
 
 ---
 
-## Phase 2: Collector Agent (Data Ingestion)
+## Technology Stack (implemented)
 
-**Goal:** Retrieve, cache, and normalize procurement data from USAspending API.
+| Concern | Choice | Why | Version |
+|---------|--------|-----|---------|
+| Runtime | Node.js 20+ | LTS, native fetch | v20.19.4 |
+| Language | TypeScript (strict, ESM) | Team requirement | 5.x |
+| CLI | `commander` | Popular, excellent TS types | 14.x |
+| HTTP | Native `fetch` + `p-retry` + `p-throttle` | Lightweight; backoff + rate limiting | |
+| Config | `cosmiconfig` | Auto-discovers config files | 9.x |
+| Validation | `zod` | Runtime schema validation | 4.x (compat layer) |
+| AI | `@anthropic-ai/sdk` | Claude API for hypothesis enhancement | 0.74.x |
+| Statistics | `simple-statistics` | Quartile/percentile for indicators | 7.x |
+| Logging | `pino` | Structured JSON, fast | 10.x |
+| Testing | `vitest` | Fast, ESM-native, Jest-compatible | 4.x |
+| Env | `dotenv` | Load ANTHROPIC_API_KEY from .env | |
 
-### Design (inspired by Kingfisher-Collect)
-
-```
-USAspending API
-    │
-    ▼
-┌──────────────┐
-│  Paginator   │  100 results/page, cursor-based for >10K
-│  + Throttle  │  0.3-0.5s delay, exponential backoff on 429/500
-│  + Retry     │  3 retries with p-retry
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│    Cache     │  .cache/requests/ (payload JSON)
-│   (fs-based) │  .cache/responses/ (raw response JSON)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│  Normalizer  │  → NormalizedAward[] (zod-validated)
-│              │  .cache/normalized/ (CSV + JSON)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│   Snapshot   │  provenance.json + manifest
-│              │  Frozen dataset for reproducibility
-└──────────────┘
-```
-
-### Endpoints to Implement
-
-| Priority | Endpoint | Purpose |
-|----------|----------|---------|
-| P0 | `spending_by_award` (POST) | Primary award search with filters |
-| P0 | `awards/{id}` (GET) | Individual award detail (competition data) |
-| P1 | `transactions` (POST) | Modification history per award |
-| P1 | `spending_by_category/recipient` (POST) | Vendor concentration aggregates |
-| P2 | `spending_over_time` (POST) | Time series for trend analysis |
-| P2 | `download/awards` (POST) | Bulk download for large slices |
-
-### Normalized Award Schema
-
-```typescript
-interface NormalizedAward {
-  // Identifiers
-  awardId: string;           // PIID or FAIN
-  internalId: string;        // USAspending generated ID
-  parentAwardId?: string;    // Parent IDV PIID
-
-  // Parties
-  recipientName: string;
-  recipientUei?: string;
-  recipientId?: string;      // Hash for recipient endpoint
-  awardingAgency: string;
-  awardingSubAgency?: string;
-  fundingAgency?: string;
-
-  // Financials
-  awardAmount: number;
-  totalObligation?: number;
-  baseExercisedOptions?: number;
-  baseAndAllOptions?: number;
-
-  // Classification
-  awardType: string;         // A, B, C, D
-  naicsCode?: string;
-  pscCode?: string;
-  description?: string;
-
-  // Dates
-  startDate: string;         // ISO date
-  endDate?: string;
-  dateModified?: string;
-
-  // Competition (from individual award detail)
-  extentCompeted?: string;
-  extentCompetedDescription?: string;
-  numberOfOffersReceived?: number;
-  solicitationProcedures?: string;
-  otherThanFullAndOpen?: string;
-  typeOfContractPricing?: string;
-  fedBizOpps?: string;       // Posted on SAM.gov?
-
-  // Modifications (populated separately)
-  modificationCount?: number;
-  totalModificationAmount?: number;
-}
-```
-
-### Tasks
-
-1. **Build USAspending API client**
-   - Typed request/response interfaces for each endpoint
-   - Native fetch with `p-throttle` (2 requests/second) and `p-retry` (3 retries, exponential backoff)
-   - Handle HTTP 429, 500, and transient errors
-
-2. **Build paginator**
-   - Page-based pagination (up to 100 pages x 100 results)
-   - Cursor-based pagination for >10K results (using `last_record_unique_id`)
-   - Progress reporting via logger
-
-3. **Build cache layer**
-   - File-based cache keyed by request payload hash (SHA-256)
-   - `.cache/requests/` and `.cache/responses/` directories
-   - Cache hit/miss logging
-   - `--no-cache` flag to force fresh requests
-
-4. **Build normalizer**
-   - Transform raw API responses to `NormalizedAward[]`
-   - Zod validation for data integrity
-   - CSV export for human inspection
-
-5. **Build snapshot manager**
-   - Freeze dataset with timestamp
-   - Generate `provenance.json` (timestamp, git hash, API version, record counts, file hashes)
-   - `manifest.json` with slice parameters and data quality notes
-
-6. **Build detail enrichment pipeline**
-   - For each award from search, optionally fetch `/awards/{id}/` for competition details
-   - Batch with throttling (this is the expensive step)
-   - Cache individual award details
-
-### Artifact
-- Working `investigate fetch --agency="Department of Defense" --recipient="MASSACHUSETTS INSTITUTE OF TECHNOLOGY" --period=2020-01-01:2024-12-31`
-- Cached data in `.cache/` with provenance
-- Normalized CSV/JSON output
+**Not yet used (planned for stretch):** `vega-lite` + `vl-convert` (charts), `unified` + `remark` (markdown processing).
 
 ---
 
-## Phase 3: Signaler Agent (Red-Flag Engine)
+## Indicator Design (Cardinal-rs inspired)
 
-**Goal:** Compute 6 MVP red-flag indicators from cached data, outputting a structured signal table.
-
-### Design (inspired by Cardinal-rs)
-
-Three-phase processing per indicator, mirroring Cardinal's `Calculate` trait:
+Each indicator follows a **fold/finalize** pattern adapted from Cardinal-rs's `Calculate` trait:
 
 ```typescript
 interface Indicator {
-  readonly id: string;        // e.g., "R001"
-  readonly name: string;      // e.g., "Single-Bid Competition"
+  readonly id: string;
+  readonly name: string;
   readonly description: string;
-
-  // Phase 1: Configure with settings from config
-  configure(settings: IndicatorConfig): void;
-
-  // Phase 2: Process each record (fold)
-  fold(award: NormalizedAward): void;
-
-  // Phase 3: Finalize and produce signals
-  finalize(): Signal[];
-
-  // Metadata for transparency
-  getMetadata(): IndicatorMetadata;
-}
-
-interface Signal {
-  indicatorId: string;
-  indicatorName: string;
-  severity: 'low' | 'medium' | 'high';
-  entityType: 'award' | 'recipient' | 'agency';
-  entityId: string;
-  entityName: string;
-  value: number;           // Measured value
-  threshold: number;       // Threshold that was exceeded
-  context: string;         // Human-readable context
-  affectedAwards: string[]; // Award IDs involved
+  configure(settings: IndicatorConfig): void;   // Apply thresholds from config
+  fold(award: NormalizedAward): void;            // Process one record
+  foldTransactions?(id: string, txns: Transaction[]): void;  // Optional
+  finalize(): Signal[];                          // Produce signals
+  getMetadata(): IndicatorMetadata;              // Transparency: thresholds, coverage
 }
 ```
 
-### 6 MVP Indicators
+**Why this pattern:** It's stateless per-record, configurable, and produces metadata alongside results for transparency. The `SignalEngine` orchestrates all indicators, runs them in sequence, and sorts results by severity.
 
-| ID | Name | Data Source | Logic |
-|----|------|-----------|-------|
-| R001 | Single-Bid Competition | `numberOfOffersReceived` from award detail | Flag awards where offers = 1 AND extent_competed includes competitive types |
-| R002 | Non-Competitive Awards | `extentCompeted` from award detail | Flag awards with codes B (Not Available), C (Not Competed), G (Not Competed Under SAP), NDO |
-| R003 | Contract Value Splitting | `awardAmount` grouped by agency + recipient + period | Detect clusters of awards just below federal thresholds ($250K SAT) |
-| R004 | Vendor Concentration | `awardAmount` aggregated by recipient per agency | Flag where single vendor >30% of agency's annual spend |
-| R005 | Excessive Modifications | Transaction history from `/transactions/` | Flag contracts with >5 modifications OR >100% cost growth |
-| R006 | Price Outliers | `awardAmount` grouped by NAICS/PSC | Flag awards >2 standard deviations above mean for same category |
+### Indicator Details
 
-### Indicator Implementation Details
+| ID | Indicator | Key Fields | Thresholds | Data Coverage (DoD-MIT) |
+|----|-----------|------------|------------|------------------------|
+| R001 | Single-Bid Competition | `numberOfOffersReceived`, `extentCompeted` | >20% rate = high severity | 39% (field often null) |
+| R002 | Non-Competitive Awards | `extentCompeted` codes B,C,G,NDO | >80% rate = high | 100% |
+| R003 | Contract Splitting | `awardAmount` near $250K/$7.5M | 3+ awards in 10% band | 100% |
+| R004 | Vendor Concentration | `awardAmount` per recipient/agency | >30% share = flag | 100% |
+| R005 | Excessive Modifications | Transaction count + cost growth | >5 mods OR >2x growth | 0% (needs `--with-transactions`) |
+| R006 | Price Outliers | `awardAmount` by NAICS/PSC | Q3 + 1.5*IQR | 100% |
 
-**R001 - Single-Bid Competition:**
-- Requires: `numberOfOffersReceived`, `extentCompeted`
-- Logic: If `extentCompeted` in [A, CDO, D, E, F] (competitive) AND `numberOfOffersReceived == 1`
-- Aggregation: Track percentage per agency as performance indicator
-- Benchmark: EU considers >20% single-bid rate as high-risk
+All configurable via `config/default.yaml`.
 
-**R003 - Contract Value Splitting:**
-- Requires: `awardAmount`, `awardingAgency`, `recipientName`, `startDate`
-- Logic: Group awards by (agency, recipient, quarter). Within each group, count awards in threshold bands:
-  - $225K-$250K (micro-purchase to SAT boundary)
-  - $7M-$7.5M (for larger thresholds)
-- Statistical test: Compare observed frequency near threshold vs. expected uniform distribution
-- Configurable: threshold values, band width, minimum cluster size
+---
 
-**R004 - Vendor Concentration:**
-- Requires: `awardAmount`, `recipientName`, `awardingAgency`, fiscal year
-- Logic: Compute Herfindahl-Hirschman Index (HHI) per agency, flag vendors with >30% share
-- Also flag sudden concentration spikes (year-over-year change)
+## Key Decisions & Rationale
 
-**R005 - Excessive Modifications:**
-- Requires: Transaction data from `/api/v2/transactions/`
-- Logic: For each award, count modifications and sum `federal_action_obligation` changes
-- Flag: mod_count > threshold OR (current_total / original_amount) > growth_threshold
-- Configurable: modification count threshold (default: 5), growth threshold (default: 2.0x)
+### Architecture Decisions
 
-**R006 - Price Outliers:**
-- Requires: `awardAmount`, `naicsCode` or `pscCode`
-- Logic: Within each NAICS/PSC group, compute mean and std dev of award amounts
-- Flag: awards > mean + 2*stddev (IQR method also available, configurable)
-- Cardinal-inspired: use quartile method (Q3 + 1.5*IQR) as alternative
+1. **fold/finalize instead of fold/reduce/finalize** -- Cardinal-rs uses reduce for parallel processing across rayon threads. We don't need parallelism in Node.js, so we simplified to fold → finalize.
 
-### Configuration Schema
+2. **zod v3 compat layer, not v4 direct** -- zod v4's `.default({})` on nested objects requires full output-typed defaults. The compat layer (`import { z } from "zod"`) allows `.default({})` with field-level defaults. We use explicit defaults merging in `config.ts` instead.
+
+3. **Claude Sonnet for hypothesis enhancement, not Opus** -- Cost efficiency. The executive assessment uses `claude-sonnet-4-5-20250929` with `max_tokens: 512` to keep API costs low while still producing high-quality interpretive text.
+
+4. **File-based cache with SHA-256 keys** -- Simple, filesystem-only, no dependencies. Cache survives across sessions. `--no-cache` flag for fresh API calls.
+
+5. **Cursor-based pagination** -- USAspending's search API uses `last_record_unique_id` for cursor pagination beyond page 100. We handle both page-based and cursor-based in the same loop.
+
+6. **Non-accusatory language is structural, not just a prompt** -- Templates are hard-coded to use question form ("Does the pattern warrant review?"), and the AI system prompt explicitly requires non-accusatory tone. The verifier checks for disclaimer presence.
+
+### Data Decisions
+
+1. **DoD → MIT as demo slice** -- ~54 awards in 2023, manageable volume, all from Air Force (Lincoln Lab), low reputational risk for demo purposes.
+
+2. **`number_of_offers_received` is often null** -- Discovered during Phase 0 API exploration. This limits R001 coverage to ~39%. The signal engine reports coverage gaps transparently in metadata.
+
+3. **Recipient deduplication not yet implemented** -- Same company can appear under multiple UEI registrations (e.g., Lockheed Martin). The `recipient_id` hash can be used for deduplication in a future pass.
+
+4. **Detail enrichment is the expensive step** -- Fetching `/awards/{id}/` for each award requires one API call per award (throttled to 2/sec). For 54 awards, this takes ~27 seconds on first run, then instant from cache.
+
+---
+
+## USAspending API Reference (validated)
+
+**Base URL:** `https://api.usaspending.gov/api/v2/`
+**Auth:** None required. **Rate limits:** None documented (design defensively).
+
+### Endpoints Used
+
+| Endpoint | Method | Use | Implemented |
+|----------|--------|-----|-------------|
+| `/search/spending_by_award/` | POST | Primary award search (filters, pagination) | Yes |
+| `/awards/{id}/` | GET | Individual award detail (competition data, offers) | Yes |
+| `/transactions/` | POST | Modification history per award | Yes |
+| `/search/spending_by_category/recipient/` | POST | Vendor concentration aggregates | Yes |
+| `/search/spending_over_time/` | POST | Time series for trend analysis | Not yet |
+| `/download/awards/` | POST | Bulk CSV export (>10K records) | Not yet |
+
+### Critical API Findings
+
+- **100 results/page max** on search; cursor-based pagination for >10K
+- **`number_of_offers_received` often null** -- even for competed contracts
+- **Recipient names inconsistent** -- same entity under multiple registrations
+- **No total result counts** -- must paginate to exhaustion
+- **DOD data has 90-day publication delay**
+- **Minimum date: 2007-10-01** for search endpoints
+
+Full field mapping in `docs/api-analysis.md`.
+
+---
+
+## Configuration Reference
+
+All thresholds in `config/default.yaml`:
 
 ```yaml
-# config/default.yaml
+api:
+  baseUrl: "https://api.usaspending.gov/api/v2"
+  requestsPerSecond: 2          # Throttle
+  maxRetries: 3                 # Exponential backoff
+  pageSize: 100                 # Max per API
+
+cache:
+  directory: ".cache"
+  enabled: true
+
+ai:
+  enabled: true                 # Falls back to templates if no API key
+  model: "claude-opus-4-6-20250219"
+
 signals:
   R001_single_bid:
-    enabled: true
-    severity_threshold: 0.20  # >20% single-bid rate = high severity
-    require_competitive_type: true
+    severityThreshold: 0.20     # >20% = high (EU benchmark)
+    requireCompetitiveType: true
 
   R002_non_competitive:
-    enabled: true
-    codes_to_flag: ["B", "C", "G", "NDO"]
+    codesToFlag: ["B", "C", "G", "NDO"]
 
   R003_splitting:
-    enabled: true
     thresholds: [250000, 7500000]
-    band_width_pct: 0.10  # 10% below threshold
-    min_cluster_size: 3
+    bandWidthPct: 0.10          # 10% below threshold
+    minClusterSize: 3
     period: "quarter"
 
   R004_concentration:
-    enabled: true
-    vendor_share_threshold: 0.30
-    spike_threshold: 0.15  # 15% year-over-year increase
+    vendorShareThreshold: 0.30  # >30% of agency spend
+    spikeThreshold: 0.15        # YoY increase
 
   R005_modifications:
-    enabled: true
-    max_modification_count: 5
-    max_growth_ratio: 2.0
+    maxModificationCount: 5
+    maxGrowthRatio: 2.0         # >2x original
 
   R006_price_outliers:
-    enabled: true
-    method: "iqr"  # "iqr" or "zscore"
-    iqr_multiplier: 1.5
-    zscore_threshold: 2.0
-    min_group_size: 5
+    method: "iqr"               # or "zscore"
+    iqrMultiplier: 1.5          # Standard outlier
+    minGroupSize: 5
 ```
-
-### Tasks
-
-1. **Build indicator base class and registry**
-   - Interface matching Cardinal's fold/finalize pattern
-   - Dynamic indicator loading from config
-   - Signal output type with severity levels
-
-2. **Implement each indicator (R001-R006)**
-   - Unit tests with fixture data per indicator
-   - Configurable thresholds from config.yaml
-   - Metadata output (thresholds used, data coverage, group sizes)
-
-3. **Build signal aggregation engine**
-   - Run all enabled indicators across the dataset
-   - Produce combined signal table (sorted by severity)
-   - Cross-reference: when multiple signals affect same entity, boost severity
-   - Output as structured JSON + human-readable table
-
-4. **Add signal CLI command**
-   - `investigate signal --input=<snapshot-dir>` runs signals on cached data
-   - `--indicator=R001,R003` to run specific indicators
-   - Output to stdout (table) and `signals.json`
-
-### Artifact
-- Working `investigate signal` command producing signal table
-- 6 indicators with passing unit tests
-- Configurable via `config.yaml`
 
 ---
 
-## Phase 4: Hypothesis + Prover Agents
+## Hackathon Compliance
 
-**Goal:** Convert signals into narrative hypotheses, then produce evidence artifacts (tables, charts) to test them.
-
-### Hypothesis Maker Design
-
-**Template-based generation + AI enhancement:**
-
-```typescript
-interface Hypothesis {
-  id: string;                // e.g., "H001"
-  signalIds: string[];       // Signals that triggered this hypothesis
-  question: string;          // Non-accusatory question form
-  context: string;           // Background explaining why this matters
-  evidenceNeeded: string[];  // What analysis would help assess this
-  severity: 'low' | 'medium' | 'high';
-}
-```
-
-**Templates (non-accusatory, following OECD guidance):**
-
-| Signal Pattern | Hypothesis Template |
-|----------------|---------------------|
-| R001 high rate for agency | "Are contract opportunities from {agency} reaching a sufficiently broad supplier base? {pct}% of competitively-solicited contracts received only one bid." |
-| R002 clustered on recipient | "Does {recipient}'s award portfolio from {agency} warrant review? {count} of {total} awards ({pct}%) were made without full competition." |
-| R003 detected | "Are there patterns in award sizing near the ${threshold} simplified acquisition threshold for {agency}? {count} awards from {agency} to {recipient} fall within {band}% of the threshold during {period}." |
-| R004 triggered | "Is there an unusual concentration of spending? {recipient} received {pct}% of {agency}'s contract value in {year}, totaling ${amount}." |
-| R005 flagged | "Have contract terms for {awardId} changed substantially post-award? The contract has undergone {count} modifications, with total obligations growing from ${original} to ${current} ({growth}% increase)." |
-| R006 flagged | "Is the award amount for {awardId} (${amount}) unusual for {naics} category contracts? It exceeds the category median by {factor}x." |
-
-**Claude API enhancement (optional but impressive for hackathon):**
-- Feed signals + templates to Claude Opus 4.6
-- Ask for refined narrative that:
-  - Maintains non-accusatory tone
-  - Adds relevant context about procurement practices
-  - Suggests specific follow-up questions
-  - Notes potential innocent explanations
-
-### Prover Design
-
-For each hypothesis, generate evidence artifacts:
-
-| Evidence Type | Format | Example |
-|---------------|--------|---------|
-| Distribution chart | Vega-Lite JSON → SVG | Award amount distribution by recipient |
-| Time series | Vega-Lite JSON → SVG | Award modifications over time |
-| Summary table | CSV + Markdown | Top recipients by agency spend |
-| Cross-tab | CSV + Markdown | Competition type by agency |
-| Anomaly highlight | JSON + Markdown | Specific flagged records with details |
-
-### Tasks
-
-1. **Build hypothesis generator**
-   - Template engine with variable interpolation
-   - Signal-to-hypothesis mapping rules
-   - Combine related signals into composite hypotheses
-   - Output structured `Hypothesis[]`
-
-2. **Integrate Claude API for narrative enhancement**
-   - Use `@anthropic-ai/sdk` to call Claude
-   - System prompt enforcing non-accusatory tone
-   - Pass signal data + templates, receive enhanced narrative
-   - Fallback to template-only if API unavailable
-
-3. **Build evidence generator (Prover)**
-   - For each hypothesis, determine required analyses
-   - Generate Vega-Lite chart specifications
-   - Generate summary statistics tables (markdown + CSV)
-   - Store all artifacts in `evidence/` with consistent naming
-
-4. **Build chart renderer**
-   - Vega-Lite JSON specs for reproducibility
-   - SVG/PNG export via `vl-convert`
-   - Consistent styling and labeling
-
-### Artifact
-- Working hypothesis generation from signal table
-- Evidence folder with charts and tables
-- Claude-enhanced narrative (when API key available)
+| Requirement | Status |
+|-------------|--------|
+| Open source (all components) | MIT license |
+| New work only (started during hackathon) | Yes -- git history proves it |
+| Team size ≤ 2 | Yes |
+| No banned content | Public data only, non-accusatory framing |
+| Problem statement alignment | **#2 "Break the Barriers"** -- expert procurement audit methodology in everyone's hands |
 
 ---
 
-## Phase 5: Verifier + Narrator Agents
+## Next Stages (Enhancement Roadmap)
 
-**Goal:** Verify all claims are backed by evidence, then assemble the final case.md report.
+### Near-Term (high impact, moderate effort)
 
-### Verifier Design
+| Enhancement | What | Why |
+|-------------|------|-----|
+| **Prover agent** | Generate Vega-Lite charts + CSV evidence tables per hypothesis | Visual evidence makes the case folder dramatically more compelling |
+| **Broader demo** | Run on agency-only (no recipient filter) to get diverse signals | Current demo is single-recipient which limits R003/R004 interest |
+| **Transaction integration** | Default `--with-transactions` for R005 coverage | Currently 0% coverage on modifications indicator |
+| **AI-enhanced narrator** | Use Claude to refine each hypothesis section, not just executive summary | More natural prose, better context per finding |
 
-```typescript
-interface VerificationResult {
-  claimId: string;
-  claim: string;
-  status: 'supported' | 'unsupported' | 'partial';
-  evidenceRefs: string[];  // Paths to evidence files
-  notes?: string;
-}
-```
+### Medium-Term (stretch goals)
 
-The verifier:
-1. Parses `case.md` (or the structured report data before rendering)
-2. For each factual claim (signal value, count, percentage):
-   - Checks that a corresponding evidence file exists
-   - Verifies the number in the claim matches the evidence
-3. For each hypothesis:
-   - Checks that at least one evidence artifact addresses it
-4. Produces a verification report
-5. Fails the build if unsupported claims remain (CI-friendly exit code)
+| Enhancement | What | Why |
+|-------------|------|-----|
+| **SAM.gov integration** | Entity Management API for UEI verification, business type enrichment | Cross-reference recipients, detect shell companies |
+| **OpenSanctions screening** | Fuzzy-match suppliers against sanctions/PEP lists | Critical for anti-corruption use case |
+| **Recipient deduplication** | Use `recipient_id` hash + parent company lookup | Same company under multiple registrations inflates concentration |
+| **Interactive dashboard** | Streamlit or web-based evidence explorer | Hackathon demo impact |
+| **Bulk download fallback** | `/download/awards/` for >10K record slices | Scale beyond API pagination limits |
 
-### Narrator Design
+### Long-Term (post-hackathon)
 
-Assembles the final case report:
-
-```markdown
-# Investigation Case File: {agency} → {recipient}
-## Investigation Period: {start} to {end}
-
-### Disclaimer
-> This report is a screening instrument. Red flags are indicators that
-> warrant further investigation by competent authorities. They are not
-> proof of wrongdoing. (OECD 2025, OCP 2024)
-
-### Executive Summary
-{AI-generated summary of key findings}
-
-### Data Overview
-- **Source:** USAspending API (snapshot: {date})
-- **Scope:** {count} awards, ${total} total value
-- **Coverage:** {coverage notes}
-
-### Signals Detected
-| ID | Indicator | Severity | Entity | Value | Threshold |
-|----|-----------|----------|--------|-------|-----------|
-{signal_table}
-
-### Hypotheses & Evidence
-
-#### H001: {hypothesis_question}
-**Triggered by:** {signal_ids}
-**Context:** {context}
-**Evidence:**
-- [Distribution Chart](evidence/h001-distribution.svg) [^1]
-- [Summary Table](evidence/h001-summary.csv) [^2]
-**Assessment:** {evidence_summary}
-
-{...repeat for each hypothesis...}
-
-### Open Questions
-- {items requiring human follow-up}
-
-### Data Quality Notes
-- {coverage gaps, missing fields, caveats}
-
-### Methodology
-- Indicators based on OCP Red Flags Guide (2024) [^ref]
-- Thresholds: {configurable values used}
-- Tool version: {version}, commit: {hash}
-
-### References
-[^1]: evidence/h001-distribution.svg (generated {timestamp})
-[^2]: evidence/h001-summary.csv ({row_count} records)
-```
-
-### Tasks
-
-1. **Build verifier**
-   - Parse structured report data
-   - Cross-reference claims to evidence files
-   - Numeric verification (claim value matches evidence)
-   - Produce verification report JSON
-   - Exit code 1 if unsupported claims found
-
-2. **Build narrator**
-   - Section generators for each report section
-   - Footnote management (auto-numbering, linking)
-   - Provenance section with tool metadata
-   - Claude API for executive summary generation
-
-3. **Build case folder assembler**
-   - Create output directory structure:
-     ```
-     case-{timestamp}/
-     ├── case.md
-     ├── evidence/
-     ├── queries/
-     ├── analysis/
-     └── provenance.json
-     ```
-   - Copy/symlink cached queries into `queries/`
-   - Generate provenance.json
-
-### Artifact
-- Complete case folder generation
-- Verified case.md with evidence links
-- provenance.json with full metadata
-
----
-
-## Phase 6: Integration & Demo
-
-**Goal:** Wire everything together, polish the end-to-end flow, prepare hackathon demo.
-
-### End-to-End Pipeline
-
-```
-investigate --agency="Department of Defense" \
-            --recipient="MASSACHUSETTS INSTITUTE OF TECHNOLOGY" \
-            --period=2020-01-01:2024-12-31 \
-            --output=./cases/dod-mit-2024
-
-Pipeline:
-  1. Collector  → fetch + cache + normalize
-  2. Signaler   → compute 6 indicators → signal table
-  3. Hypothesis  → generate questions from signals
-  4. Prover     → produce evidence artifacts
-  5. Verifier   → validate all claims
-  6. Narrator   → assemble case.md
-
-Output: cases/dod-mit-2024/
-```
-
-### Tasks
-
-1. **Wire orchestrator pipeline**
-   - Sequential agent execution with shared context
-   - Progress reporting (spinner + structured logs)
-   - Error handling and partial-run recovery
-   - `--dry-run` mode that shows what would happen
-
-2. **Polish CLI experience**
-   - Colored output with progress indicators
-   - `--verbose` and `--quiet` modes
-   - Helpful error messages with suggestions
-   - Example commands in `--help`
-
-3. **Create demo case**
-   - Run full investigation on DoD → MIT slice
-   - Review and curate the output
-   - Ensure the case.md is compelling and clear
-   - Screenshot/record the demo flow
-
-4. **Write README**
-   - Installation and quickstart
-   - Architecture overview with diagram
-   - Example output
-   - API key setup instructions
-
-5. **Ensure hackathon compliance**
-   - Open source license (MIT or Apache 2.0)
-   - Clean git history
-   - No pre-existing code
-   - Ethical disclaimers in README and output
-
-### Artifact
-- Working end-to-end `investigate` command
-- Demo case folder with real data
-- Hackathon-ready README
-
----
-
-## Opus 4.6 Capabilities to Showcase
-
-The project should demonstrate these frontier model features:
-
-1. **Multi-agent orchestration:** 6 specialized agents (Collector, Signaler, Hypothesis Maker, Prover, Verifier, Narrator) with clear responsibilities and handoffs.
-
-2. **Long-context processing:** Feed entire dataset slices (hundreds of awards with full detail) into the hypothesis and narration steps.
-
-3. **Structured output:** Generate typed JSON (signals, hypotheses, verification results) from Claude API calls, not just free-text.
-
-4. **Code generation:** Prover agent generates analysis scripts/queries dynamically based on the specific signals detected.
-
-5. **Verification and self-correction:** Verifier agent catches unsupported claims and triggers revision.
-
-6. **Ethical reasoning:** Hypothesis Maker maintains non-accusatory tone, considers alternative explanations, follows OECD guidance.
-
-7. **Reproducibility:** Every AI-generated artifact includes the prompt, model version, and parameters used, making the analysis auditable.
-
----
-
-## Risk Mitigation
-
-| Risk | Mitigation |
-|------|------------|
-| API instability / rate limits | Aggressive caching, offline mode from snapshots, bulk download fallback |
-| Data quality gaps | Minimum coverage thresholds per indicator, data quality notes in report |
-| False positives | Multiple severity levels, combination scoring, clear disclaimers |
-| Time pressure (hackathon) | Phases 0-3 are core; Phases 4-5 can use simpler templates without Claude API; Phase 6 can skip polish |
-| Claude API costs | Cache API responses, use templates as fallback, minimize token usage |
-
----
-
-## Execution Order & Dependencies
-
-```
-Phase 0 ──→ Phase 1 ──→ Phase 2 ──→ Phase 3 ──→ Phase 4 ──→ Phase 5 ──→ Phase 6
-  │            │            │            │            │            │            │
-  │            │            │            │            │            │            │
-  API          CLI          Fetch        Signals      Hypotheses   Case.md      Demo
-  analysis     skeleton     working      working      + Evidence   verified     ready
-```
-
-**Parallelization opportunities:**
-- Phase 0 exploration + Phase 1 scaffolding can overlap
-- Within Phase 3, indicators R001-R006 can be developed in parallel
-- Phase 4 hypothesis templates can be drafted while Phase 3 indicators are being coded
-- Phase 5 narrator templates can be drafted during Phase 4
+| Enhancement | What |
+|-------------|------|
+| OCDS data format support | International procurement datasets |
+| Beneficial ownership (BODS) | Link suppliers to ultimate owners |
+| Network analysis | Entity relationship graphs |
+| More indicators | Expand from 6 to OCP's full 73-indicator catalogue |
+| CI/CD integration | Auto-run on schedule, alert on new signals |
 
 ---
 
 ## Session Resumption Protocol
 
-Each phase produces artifacts that serve as checkpoints. To resume:
+To resume development:
 
-1. Check `docs/PROJECT_PLAN.md` for overall status
-2. Check `docs/phase-{N}-complete.md` for phase completion notes
-3. Check git log for latest committed work
-4. The `.cache/` directory preserves all API data across sessions
-5. `provenance.json` in any case folder describes the exact state of that run
+1. **Read this document** -- contains full implementation state and decisions
+2. **Check git log** -- `git log --oneline` shows what's committed
+3. **Run tests** -- `npm test` (24 tests, all should pass)
+4. **Run typecheck** -- `npm run typecheck` (should be clean)
+5. **Check cache** -- `.cache/` preserves API data; re-runs are instant
+6. **Check cases/** -- previous investigation outputs preserved
 
-After completing each phase, we'll create a `docs/phase-{N}-complete.md` file documenting:
-- What was accomplished
-- Key decisions made
-- Any deviations from plan
-- Starting point for next phase
+### Key files for context
+
+| File | Purpose |
+|------|---------|
+| `docs/PROJECT_PLAN.md` | This document -- full implementation state |
+| `docs/PROJECT_BRIEF.md` | Hackathon-ready project description |
+| `docs/api-analysis.md` | USAspending field-to-indicator mapping |
+| `config/default.yaml` | All configurable thresholds |
+| `src/signaler/types.ts` | Core Indicator interface |
+| `src/shared/types.ts` | All shared type definitions |
+| `exploration/README.md` | API exploration findings |
