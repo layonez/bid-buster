@@ -1,7 +1,7 @@
 # Procurement Investigator - Project Plan
 
 > **Last updated:** 2026-02-11
-> **Current stage:** Enhanced MVP + QueryContext fix. Phases A-F (investigator, charts, dashboard) complete. Next: output quality hardening.
+> **Current stage:** Full pipeline implemented (Phases A-F + QueryContext). Output quality audit complete. Next: Phases G-J (output revolution, visible agent reasoning, traceability).
 
 ## Executive Summary
 
@@ -9,7 +9,9 @@
 
 **Key differentiator:** Investigation-as-Code -- every finding is reproducible, every claim is verified against computed evidence, every run produces a git-committable case folder with CSV evidence files.
 
-**Next evolution: Autonomous Investigative Agent.** Static rules engines (Cardinal-rs, OCDS Red Flags toolkit) detect patterns. Analysts then spend weeks chasing those patterns through multiple data sources, forming theories, validating them. **Opus 4.6 can do the analyst's job** -- not just flag "high concentration," but autonomously reason: "This looks like a UARC arrangement, let me check SAM.gov entity type to confirm, and if so, reframe the finding as expected rather than suspicious." The differentiator isn't better rules. It's an **autonomous investigative agent that reasons, decides what data it needs, fetches it, iterates, and produces a fully-referenced case file that a human can validate in minutes instead of weeks.**
+**Current challenge: From data scan to analyst-grade investigation.** The full technical pipeline works -- 8-step collect→signal→investigate→hypothesize→prove→enhance→report→verify. But an output quality audit revealed the gap: **the tool produces 1,356 signals where it should produce 5-10 material findings.** The output overwhelms rather than informs. The AI agent's reasoning is invisible. Evidence CSVs are generic data dumps rather than entity-specific proof.
+
+**Next evolution:** Close the gap between "red flag detection" (what rules engines do) and "investigation-as-code" (what we promised). This means: (1) material findings with dollar-weighted severity instead of flat signal lists, (2) visible agent reasoning -- a `log_reasoning` tool that makes the AI's investigation narrative a first-class artifact, (3) entity-scoped evidence that traces from finding → evidence → API source, and (4) a concise executive briefing that tells a story in 1 page.
 
 ---
 
@@ -68,6 +70,17 @@
 - All 54 awards are MIT (expected: `--recipient` filter), so R004 concentration was structurally 100%
 - See "Data Interpretation Issues Found & Fixed" below for full analysis
 
+**Output quality audit findings (critical -- drives next phases):**
+- case.md is **820KB / 10,907 lines** -- unreadable by any human
+- dashboard.html is **19MB** -- chokes most browsers
+- **883 evidence files / 550MB** -- not git-committable as promised
+- **1,356 signals** listed flat without materiality hierarchy -- a $7.9K sole-source gets same "HIGH" as $1.59B
+- **613 hypotheses** with identical template language (352 R006 + 260 R002) -- no prioritization or narrative arc
+- Evidence CSVs are **generic, not entity-specific**: every R002 hypothesis links to the same 10K-row global CSV
+- **Zero visible AI contribution** in the default run (no `--deep`, no investigation section)
+- No "so what?" context: missing industry benchmarks, justification codes, dollar-weighted severity, next steps
+- See "Output Quality Audit" section below for full analysis and fix plan
+
 ### Git History
 
 ```
@@ -102,22 +115,22 @@ investigate run [--agency=<name>] [--recipient=<name>] --period=<start:end> [--d
   Step 8: VERIFY        cross-check claims + tautology detection → pass/fail
 ```
 
-The architectural shift:
+The architectural shift (current → target):
 
 ```
-Current:  Collect -> Rules -> Template -> Report  (static, one-pass)
+Current:  Collect → Rules → 1,356 flat signals → 613 template hypotheses → 820KB report
 
-Target:   Collect -> Rules -> OPUS INVESTIGATOR -> Report
+Target:   Collect → Rules → AGENT TRIAGE → Top-N Material Findings → Concise Briefing
                                |
-                    +----------------------------+
-                    |  Examines initial signals   |
-                    |  Plans investigation        |
-                    |  Fetches enrichment data    | <-- SAM.gov, OpenSanctions,
-                    |  Cross-references sources   |     sub-awards
-                    |  Tests hypotheses           |
-                    |  Iterates if needed         |
-                    |  Assembles evidence chain   |
-                    +----------------------------+
+                    +-----------------------------------+
+                    |  1. Triages signals by materiality |
+                    |  2. log_reasoning: records thinking | <-- visible reasoning trace
+                    |  3. search_usaspending: baselines   | <-- comparative data
+                    |  4. SAM.gov / OpenSanctions          |
+                    |  5. Forms/revises theories            |
+                    |  6. Produces Five C's findings        |
+                    |  7. Writes investigation narrative    |
+                    +-----------------------------------+
 ```
 
 ### Source Layout (actual)
@@ -159,21 +172,35 @@ src/
 │   ├── generator.ts              # Template + Claude AI executive assessment
 │   └── templates.ts              # 6 indicator-specific non-accusatory templates
 │
+├── enrichment/                   # Multi-source enrichment clients
+│   ├── index.ts                  # Re-exports all clients
+│   ├── types.ts                  # EntityVerification, SanctionsScreenResult, SubAwardData
+│   ├── sam-gov.ts                # SAM.gov Entity Management API v3 client
+│   ├── open-sanctions.ts         # OpenSanctions Match API client
+│   └── subawards.ts              # USAspending sub-awards client
+│
+├── investigator/                 # Opus 4.6 Investigative Agent
+│   ├── agent.ts                  # Autonomous tool-calling investigation loop
+│   └── tools.ts                  # Tool definitions (verify_entity, screen_sanctions, etc.)
+│
 ├── prover/                       # Prover Agent
-│   └── analyzer.ts               # CSV evidence tables per hypothesis (all 6 indicators)
+│   ├── analyzer.ts               # CSV evidence tables per hypothesis (all 6 indicators)
+│   ├── charts.ts                 # Vega-Lite chart spec builders (6 chart types)
+│   └── renderer.ts               # Server-side SVG rendering via Vega
 │
 ├── verifier/                     # Verifier Agent
-│   └── checker.ts                # 10-point claim-evidence cross-check
+│   └── checker.ts                # Claim-evidence cross-check + tautology detection
 │
 ├── narrator/                     # Narrator Agent
-│   ├── report.ts                 # case.md assembly (all sections + evidence links)
-│   └── enhancer.ts               # AI per-hypothesis narrative enrichment
+│   ├── report.ts                 # case.md assembly (Data Scope, signals, hypotheses, evidence)
+│   ├── enhancer.ts               # AI per-hypothesis narrative enrichment (Claude Sonnet)
+│   └── dashboard.ts              # Interactive HTML dashboard generator
 │
 ├── orchestrator/                 # Pipeline orchestration
-│   └── pipeline.ts               # 7-step sequential pipeline runner
+│   └── pipeline.ts               # 8-step pipeline with QueryContext propagation
 │
 └── shared/                       # Shared utilities
-    ├── types.ts                  # Signal, Hypothesis, Evidence, Provenance, etc.
+    ├── types.ts                  # Signal, Hypothesis, Evidence, QueryContext, InvestigationFindings, etc.
     ├── logger.ts                 # Pino structured logging
     ├── fs.ts                     # Case folder creation, JSON I/O, SHA-256
     └── provenance.ts             # Git commit, timestamps, versioning
@@ -181,234 +208,329 @@ src/
 
 ### Case Folder Output
 
-Each run of `investigate run` produces:
+**Current (problematic):** `cases/case-YYYY-MM-DD/` -- 550MB, 883 files, date-only name.
+
+**Target (Phase G):** Compact, browsable, git-committable.
 
 ```
-cases/case-YYYY-MM-DD/
-├── case.md               # Full investigation report (markdown)
-├── signals.json          # Structured signal data
-├── hypotheses.json       # Generated hypotheses with evidence needs
-├── evidence-manifest.json # Evidence artifact metadata and references
-├── verification.json     # Claim-by-claim verification results
-├── awards.json           # Normalized award data (full dataset)
-├── provenance.json       # Audit trail (timestamp, git hash, versions)
-├── evidence/             # CSV evidence tables per hypothesis
-│   ├── awards-summary.csv              # Master dataset with all key fields
-│   ├── H-R002-*-competition-breakdown.csv  # Competition type distribution
-│   ├── H-R002-*-non-competed-awards.csv    # Non-competed awards detail
-│   ├── H-R004-*-vendor-concentration.csv   # Vendor share analysis
-│   ├── H-R006-*-price-analysis.csv         # Price outlier statistics
-│   └── ...                                  # Per-hypothesis evidence files
-├── queries/              # (future: raw API request/response pairs)
-└── analysis/             # (future: reproducible analysis scripts)
-```
-
-**Target case folder (after Phase E):**
-
-```
-cases/case-YYYY-MM-DD/
-├── case.md                        # Full report with chart references
-├── dashboard.html                 # Interactive single-file dashboard (NEW)
-├── signals.json
-├── hypotheses.json
-├── investigation.json             # Opus agent findings + tool call log (NEW)
-├── evidence-manifest.json
-├── verification.json
-├── awards.json
-├── provenance.json
+cases/dod-mit-2023_20260211T1629/       # Agency-recipient-period_timestamp
+├── README.md                            # 1-page executive briefing (TOP 5-10 FINDINGS)
+├── case.md                              # Concise report (inverted pyramid, <5 pages)
+├── dashboard.html                       # Lightweight interactive dashboard (<1MB)
+├── investigation-narrative.md           # Agent reasoning trace (--deep only)
+├── data/                                # Machine-readable artifacts
+│   ├── signals.json                     # Consolidated signals (materiality-filtered)
+│   ├── findings.json                    # Top-N material findings (Five C's structured)
+│   ├── hypotheses.json
+│   ├── awards.json
+│   ├── investigation.json               # Agent tool calls + reasoning log (--deep)
+│   ├── investigation-conversation.json  # Full Claude conversation (--deep)
+│   ├── verification.json
+│   └── provenance.json
 ├── evidence/
-│   ├── awards-summary.csv
-│   ├── H-R002-*-*.csv
-│   ├── award-distribution.svg     # (NEW) Vega-Lite charts
-│   ├── vendor-concentration.svg   # (NEW)
-│   ├── competition-breakdown.svg  # (NEW)
-│   └── ...
-├── enrichment/                    # (NEW) Raw enrichment data
-│   ├── sam-gov-entities.json
-│   ├── sanctions-screening.json
-│   └── subawards.json
-├── queries/
-└── analysis/
+│   ├── summary/                         # Top findings only (5-10 CSVs)
+│   │   ├── mit-competition-breakdown.csv
+│   │   ├── mit-price-outliers.csv
+│   │   └── mit-vendor-context.csv
+│   ├── charts/                          # SVG visualizations
+│   │   ├── chart-award-distribution.svg
+│   │   ├── chart-competition-breakdown.svg
+│   │   └── chart-vendor-concentration.svg
+│   └── detail/                          # Full per-entity CSVs (--full-evidence flag)
+│       ├── R002/
+│       ├── R003/
+│       └── R006/
+└── evidence-manifest.json
 ```
+
+**Key changes from current:** Folder named by query params. README.md as primary output. Entity-scoped evidence. <10MB default (detail/ only with `--full-evidence`). Agent reasoning as dedicated artifact.
 
 ---
 
-## Next Implementation: Opus 4.6 Investigative Agent
+## Next Implementation: Phases G-J (Output Quality Revolution)
 
-### Vision
+### The Problem We're Solving
 
-What makes this impossible without Opus 4.6: The model decides what to investigate deeper, which sources to query, when findings change the interpretation, and when the investigation is complete. No static pipeline can do this.
+An output quality audit (domain expert + agentic architect + end-user advocate) revealed:
 
-**Key shifts:**
+> The tool currently does "red flag detection" (Cardinal-rs level) but aspires to "investigation-as-code" (analyst level). The gap is the analytical reasoning layer that converts statistical signals into prioritized, contextualized, actionable findings with clear next steps.
 
-1. **From Rules Engine to Reasoning Agent** -- Opus 4.6 looks at initial signals, plans an investigation strategy, requests additional data, revises hypotheses based on enrichment data, and decides when it is done.
+**Specific problems identified:**
 
-2. **From CSV Tables to a Verifiable Evidence Package** -- Visual charts (Vega-Lite SVG) embedded directly in the report, interactive HTML dashboard, pinpoint references with cross-reference matrix showing which sources support which claims.
+| Problem | Current | Target |
+|---------|---------|--------|
+| Signal overload | 1,356 flat signals, no hierarchy | Top 10-20 material findings, dollar-weighted |
+| No materiality | $7.9K sole-source = same "HIGH" as $1.59B | Minimum thresholds: $100K total, 3+ awards |
+| Template repetition | 613 hypotheses, 352 identical R006 templates | Entity-level aggregation, ~20 unique findings |
+| Evidence not scoped | Every R002 CSV has same 10K rows | Entity-specific evidence per finding |
+| Agent invisible | Zero visible AI reasoning in default output | Investigation narrative as first-class artifact |
+| No "so what?" | Statistical anomaly with no context | Five C's: Condition, Criteria, Cause, Effect, Recommendation |
+| Report unreadable | 820KB / 10,907 lines | 1-page briefing + concise report + detail appendix |
+| Not git-committable | 550MB / 883 files | <10MB default, `--full-evidence` for complete data |
+| No traceability | Can't trace finding → API call | Provenance chain: finding → evidence → cache key → API URL |
 
-3. **From Single-Source to Multi-Source Intelligence** -- USAspending alone has limited fields. Real investigations cross-reference SAM.gov (entity type, FFRDC status), OpenSanctions (sanctions/PEP screening), USAspending sub-awards (pass-through arrangements).
+### Phase G: Output Quality Revolution (HIGHEST PRIORITY)
 
-4. **Iterative Deepening** -- The killer feature no rules engine has:
-   - Iteration 1: Run signals on USAspending data -> 3 signals detected
-   - Iteration 2: Opus examines signals -> "Concentration is 100% but let me check entity type" -> Fetches SAM.gov -> "MIT Lincoln Lab is a UARC (FFRDC)" -> Revises hypothesis: "Concentration is structurally expected"
-   - Iteration 3: Opus notices non-competitive rate is high -> "Let me check if these use sole-source justifications allowed for FFRDCs" -> Fetches competition justification data -> Conclusion: "Pattern is consistent with FFRDC designation, but 3 awards lack proper justification codes -- THESE are the ones worth investigating"
+This phase transforms the output from a data dump to an analyst-grade briefing. **This is the highest-impact work for the hackathon demo.**
 
-### Implementation Phases
+#### G1: Signal Consolidation & Materiality Filtering
 
-#### Phase A: Multi-Source Enrichment Clients (4 new files)
+**Problem:** 1,356 signals where most are trivial (1-award vendors, sub-$10K amounts).
 
-Build API clients for external data sources using existing caching/throttling infrastructure.
+**Changes:**
+- Add materiality config: `min_award_count: 3`, `min_total_amount: 100000` to `config/default.yaml`
+- New `src/signaler/consolidator.ts`: groups signals by entity, computes aggregate risk scores (dollar-weighted severity), ranks by materiality
+- Output: `MaterialFinding[]` -- top-N findings replacing flat signal list
+- Pipeline step 2.5: consolidate after signal computation, before investigation
 
-**A1: `src/enrichment/types.ts`** -- Shared types for all enrichment results:
-- `EntityVerification` -- SAM.gov entity data (type, status, exclusions, CAGE, parent company)
-- `SanctionsScreenResult` -- OpenSanctions match (score, datasets, topics, matched name)
-- `SubAwardData` -- Sub-award recipient, amount, description, link to prime
-- `EnrichmentResult` -- Union of all enrichment types with source provenance
-
-**A2: `src/enrichment/sam-gov.ts`** -- SAM.gov Entity Management API v3 client:
-- `searchEntity(name: string)` -- Search by legal business name
-- `lookupByUei(uei: string)` -- Direct UEI lookup
-- `checkExclusions(name: string)` -- Search exclusions/debarment list
-- Auth: API key from `.env` (`SAM_GOV_API_KEY`), graceful fallback if missing
-- Rate limit: Cache aggressively (entity data changes rarely), max 1000 req/day
-- Reuse: `ResponseCache` from `src/collector/cache.ts`, `p-retry` + `p-throttle`
-
-**A3: `src/enrichment/open-sanctions.ts`** -- OpenSanctions Match API client:
-- `screenEntity(name: string, schema?: "Company" | "Person")` -- Fuzzy match against sanctions/PEP lists
-- Scoring: `algorithm=logic-v2`, threshold 0.7
-- Auth: API key from `.env` (`OPENSANCTIONS_API_KEY`), optional
-- Graceful fallback: if no API key, skip with warning
-
-**A4: `src/enrichment/subawards.ts`** -- USAspending Sub-Awards client:
-- `fetchSubAwards(awardId: string)` -- Get sub-awards for a prime award
-- No auth required (same as main API)
-- Reuse: existing `USAspendingClient` throttle/cache infrastructure
-
-#### Phase B: Opus 4.6 Investigative Agent (2 new files) -- THE CENTERPIECE
-
-**B1: `src/investigator/tools.ts`** -- Tool definitions for the agent:
-
-| Tool | Description | Maps To |
-|------|-------------|---------|
-| `verify_entity` | Look up entity in SAM.gov (type, status, exclusions, parent company) | `sam-gov.ts` |
-| `screen_sanctions` | Screen entity against sanctions/PEP lists | `open-sanctions.ts` |
-| `fetch_subawards` | Get sub-contracting data for a specific award | `subawards.ts` |
-| `fetch_comparable_awards` | Get similar awards from other agencies/recipients for comparison | USAspending search API |
-| `analyze_statistical_pattern` | Run statistical analysis on a subset of awards | In-memory computation |
-| `lookup_award_detail` | Get full details for a specific award by ID | Existing `USAspendingClient` |
-
-Each tool returns structured JSON with source provenance embedded (which API, endpoint, timestamp, cache status).
-
-**B2: `src/investigator/agent.ts`** -- The autonomous investigation loop:
-
-```
-Input: signals, awards, config, logger
-Output: InvestigationFindings (enriched hypotheses + cross-references + evidence chain)
+**New type:**
+```typescript
+interface MaterialFinding {
+  id: string;                    // "F-001"
+  rank: number;                  // 1-N by materiality score
+  entityName: string;
+  entityType: EntityType;
+  signals: Signal[];             // All signals for this entity
+  totalDollarValue: number;      // Sum of affected award amounts
+  materialityScore: number;      // dollar × severity × signal_count
+  primaryIndicator: string;      // Highest-severity indicator for this entity
+  awardCount: number;
+}
 ```
 
-**Flow:**
-1. Build initial prompt with all signals, award summary stats, and data quality notes
-2. System prompt establishes the agent as a procurement integrity analyst with strict non-accusatory rules
-3. Agent receives tools and decides what to investigate
-4. Loop: call API -> check `stop_reason` -> if `tool_use`, execute tools, append results -> repeat
-5. Max iterations cap (configurable, default 10) to prevent runaway loops
-6. Agent produces structured findings as final text output (parsed via JSON block)
+**Test:** Verify that DoD-MIT produces ~10-20 material findings, not 1,356 signals.
 
-**Key design decisions:**
-- Model: `claude-opus-4-6` (not Sonnet -- this is where the reasoning power matters)
-- `max_tokens: 4096` per turn (agent needs room to reason)
-- `tool_choice: { type: "auto" }` -- agent decides when and which tools to use
-- System prompt enforces: non-accusatory language, cite every source, explain innocent alternatives, reference specific data points
-- Each tool result includes `{ source, endpoint, timestamp, cacheHit }` provenance
+#### G2: Entity-Scoped Evidence (Fix CSV Duplication)
 
-**Example agent reasoning (DoD-MIT investigation):**
-1. "R004 shows 100% concentration. Let me check SAM.gov for MIT's entity type." -> `verify_entity("MASSACHUSETTS INST OF TECHNOLOGY")`
-2. Discovers MIT Lincoln Lab is registered as FFRDC -> "Concentration is structurally expected for FFRDCs"
-3. "R002 shows 79.6% non-competitive. Let me check if this rate is normal for FFRDCs." -> `fetch_comparable_awards({ naics: "541715", excludeRecipient: "MIT" })`
-4. Finds other FFRDC recipients have similar rates -> "Pattern consistent with FFRDC designation"
-5. "Let me screen MIT against sanctions lists as a baseline check." -> `screen_sanctions("Massachusetts Institute of Technology")`
-6. Clean result -> "No sanctions concerns"
-7. "3 awards lack proper competition codes despite FFRDC status. These warrant review." -> Final findings
+**Problem:** Every R002 hypothesis links to the same 10K-row global CSV. Evidence is generic, not targeted.
 
-#### Phase C: Vega-Lite Visual Evidence (2 new files)
+**Changes:**
+- Update `src/prover/analyzer.ts`: filter evidence CSVs to only the relevant entity's awards
+- R002 CSV: show only that entity's awards with competition codes and justification fields
+- R006 CSV: show the flagged award vs. its NAICS peers (10-20 rows, not thousands)
+- R004 CSV: show top-10 vendors in the agency portfolio for comparison
 
-**C1: `src/prover/charts.ts`** -- Vega-Lite specification builders:
+**Test:** Verify evidence CSV row count matches entity's award count, not global dataset.
 
-| Chart | Spec Builder | When Generated |
-|-------|-------------|----------------|
-| Award Distribution Histogram | `buildAwardDistributionSpec(awards)` | Always |
-| Vendor Concentration Pie | `buildVendorConcentrationSpec(awards)` | When R004 fires |
-| Competition Breakdown Bar | `buildCompetitionBreakdownSpec(awards)` | When R001 or R002 fires |
-| Price Outlier Scatter | `buildPriceOutlierSpec(awards, signals)` | When R006 fires |
-| Modification Timeline | `buildModificationTimelineSpec(transactions)` | When R005 fires + transactions available |
-| Threshold Clustering | `buildThresholdClusteringSpec(awards)` | When R003 fires |
+#### G3: Executive Briefing (README.md)
 
-Each returns a Vega-Lite JSON spec with inline data (no external references).
+**Problem:** case.md opens with a disclaimer then a 1,356-row table. First page should tell the story.
 
-**C2: `src/prover/renderer.ts`** -- Server-side SVG rendering:
-- Uses `vega` + `vega-lite` packages (SVG mode -- no system dependencies)
-- `renderChartToSvg(spec: VegaLiteSpec): Promise<string>` -- compile to Vega, render via View API
-- Writes SVG files to `evidence/` directory
-- Graceful fallback: if Vega import fails, skip charts with warning (CSV evidence still works)
+**Changes:**
+- New `src/narrator/briefing.ts`: generates `README.md` as the primary human output
+- Structure:
+  1. Title + scope (1 line: "MIT — DoD Procurement Screening, 2023")
+  2. Key stats (awards count, total value, period)
+  3. **Top 5 findings** -- each with: what was found, why it matters, link to evidence
+  4. What this means (2-3 sentences of AI-generated context)
+  5. Next steps (concrete follow-up actions)
+- Max length: ~100 lines (1 printed page)
 
-**New dependencies:** `npm install vega vega-lite` (SVG-only, no `node-canvas` needed)
+**Test:** Verify README.md is generated, contains top findings, and is <200 lines.
 
-#### Phase D: Interactive HTML Dashboard (1 new file)
+#### G4: Five C's Finding Structure
 
-**D1: `src/narrator/dashboard.ts`** -- Generate a self-contained `dashboard.html`:
-- Loads Vega/Vega-Lite/Vega-Embed from jsDelivr CDN
-- All data embedded inline as JSON (awards, signals, hypotheses, evidence manifest)
-- Sections: Executive Summary, interactive signal table, charts per hypothesis, evidence links, provenance trail
-- Template approach: build HTML string with interpolated data
-- Single file, opens in any browser, no server needed
+**Problem:** Hypotheses are template-generated questions without cause, effect, or recommendations.
 
-#### Phase E: Pipeline Integration + CLI (3 file updates)
+**Changes:**
+- New `src/hypothesis/five-cs.ts`: generates GAO-standard finding structure for each material finding
+- **Condition:** Specific quantified metric from signal data
+- **Criteria:** Standard being compared against, with citation (FAR, OCP, OECD)
+- **Cause:** Available justification data OR "not available in dataset"
+- **Effect:** Dollar amount at risk, % of agency spend
+- **Recommendation:** Per-indicator follow-up template (e.g., "Review sole-source justifications")
+- Surface `other_than_full_and_open` / `reason_not_competed` from award detail data for R002 Cause
 
-**E1: Update `src/orchestrator/pipeline.ts`** -- Expand to 8-step pipeline with investigator as step 3
+**Test:** Verify each material finding has all 5 components populated.
 
-**E2: Update `src/cli/commands/investigate.ts`** -- New flags:
-- `--deep` enables the Opus investigative agent (default: off for fast runs)
-- `--no-ai` disables all AI features (templates only)
-- `--charts` enables Vega-Lite chart generation (default: on if vega installed)
+#### G5: Case Folder Redesign
 
-**E3: Update `src/narrator/report.ts`** -- Include SVG chart references, investigator findings section, dashboard link
+**Problem:** `case-YYYY-MM-DD` collides on reruns, 550MB not git-committable.
 
-#### Phase F: Tests (3 new + 2 updated)
+**Changes:**
+- Update `src/shared/fs.ts`: folder name = `{agency_slug}-{recipient_slug}-{period}_{timestamp}`
+- Default output: summary evidence only (<10MB). Full per-entity CSVs only with `--full-evidence`
+- Reorganize: `data/` for JSON artifacts, `evidence/summary/` + `evidence/charts/` + `evidence/detail/`
+- Add `--full-evidence` CLI flag
 
-**F1: `tests/unit/enrichment.test.ts`** -- SAM.gov, OpenSanctions, sub-awards clients with mocked HTTP; graceful fallback when API keys missing
+**Test:** Verify folder name includes query params, default size <10MB.
 
-**F2: `tests/unit/investigator.test.ts`** -- Tool definition schema validity; agent loop with mocked Anthropic responses; max iteration cap; findings structure
+### Phase H: Visible Agent Reasoning (THE DEMO DIFFERENTIATOR)
 
-**F3: `tests/unit/charts.test.ts`** -- Vega-Lite spec generation; schema validation; SVG rendering produces valid output
+This phase makes the AI agent's investigation process transparent and verifiable. **This is what makes the hackathon demo compelling -- showing the AI's investigation narrative, not just its conclusions.**
 
-**F4: Update `tests/unit/report.test.ts`** -- Verify chart references appear in case.md
+#### H1: `log_reasoning` Tool
 
-**F5: Update `tests/unit/prover.test.ts`** -- Verify SVG artifacts in evidence manifest
+**Problem:** The agent's reasoning is trapped inside the Claude API call. `toolCallLog` captures what tools were called, but not WHY or what conclusions were drawn.
 
-### Implementation Order
+**Changes:**
+- Add `log_reasoning` tool to `src/investigator/tools.ts`:
+  ```typescript
+  {
+    name: "log_reasoning",
+    description: "Record your investigative reasoning. Call BEFORE and AFTER each tool use.",
+    input_schema: {
+      properties: {
+        observation: { type: "string" },    // What caught your attention
+        hypothesis: { type: "string" },     // Your current theory
+        action_plan: { type: "string" },    // What you plan to check next
+        finding: { type: "string" },        // What previous tool revealed (omit on first)
+        confidence: { type: "number" },     // 0-1: how significant is this lead
+      }
+    }
+  }
+  ```
+- Tool implementation: just pushes to `InvestigationStep[]` array (zero cost)
+- Update system prompt to require reasoning logging at each step
 
-| Step | Phase | Files | Depends On | Parallelizable |
-|------|-------|-------|------------|----------------|
-| 1 | A (Enrichment types + clients) | 4 new files | Nothing | Yes (with step 3) |
-| 2 | B (Investigative agent) | 2 new files | Phase A | No |
-| 3 | C (Charts) | 2 new files | Nothing | Yes (with step 1) |
-| 4 | D (Dashboard) | 1 new file | Phase C | No |
-| 5 | E (Pipeline + CLI integration) | 3 file updates | Phases A-D | No |
-| 6 | F (Tests) | 3 new + 2 updated | Phases A-E | No |
+**New types:**
+```typescript
+interface InvestigationStep {
+  stepNumber: number;
+  timestamp: string;
+  observation: string;
+  hypothesis: string;
+  action: string;
+  toolCallIds: string[];
+  finding: string;
+  conclusion: string;
+  confidenceDelta: number;
+  evidenceStrength: "strong" | "moderate" | "weak" | "absent";
+}
 
-Steps 1 and 3 can run in parallel. Total: ~13 new/modified files.
+interface InvestigationNarrative {
+  steps: InvestigationStep[];
+  deadEnds: Array<{ hypothesis: string; investigation: string; conclusion: string }>;
+  discoveries: Array<{ description: string; novelty: "expected" | "unexpected" | "contradictory" }>;
+}
+```
 
-### New Dependencies
+**Test:** Verify agent produces `InvestigationStep[]` entries between tool calls.
+
+#### H2: `search_usaspending` Tool (Comparative Data)
+
+**Problem:** `fetch_comparable_awards` only searches the in-memory dataset. When investigating DoD→MIT, it compares MIT awards to other MIT awards -- circular.
+
+**Changes:**
+- New tool in `src/investigator/tools.ts`: `search_usaspending` -- makes new API queries via existing `USAspendingClient`
+- Agent can: pull all DoD R&D awards (not just MIT's) for baseline rates, pull MIT's awards from other agencies, pull same-NAICS awards government-wide
+- Limit: 100 results per query, max 3 queries per investigation (cost control)
+- Returns: summary stats (count, total $, non-competitive rate, avg amount) + top-5 individual awards
+
+**Test:** Verify tool can fetch awards outside the initial query scope.
+
+#### H3: Investigation Narrative Rendering
+
+**Problem:** Agent findings appear as a flat summary paragraph in case.md. The reasoning chain is invisible.
+
+**Changes:**
+- New `src/narrator/narrative.ts`: renders `InvestigationNarrative` as `investigation-narrative.md`
+- Structure: chronological investigation story with for each step: "I noticed X → checked Y → found Z → concluded W"
+- Include dead ends: "I checked SAM.gov for FFRDC status but found no match"
+- Include discoveries: "Cross-referencing reveals MIT and JHU have similar non-competitive rates"
+- Embed in case.md as "Investigation Notes" section (prominent, not appendix)
+
+**Test:** Verify narrative.md is generated with step-by-step reasoning.
+
+#### H4: New Hypothesis Generation by Agent
+
+**Problem:** Agent can only enrich pre-computed hypotheses. Can't surface discoveries the rule engine missed.
+
+**Changes:**
+- Add `create_finding` tool to `src/investigator/tools.ts`: agent registers novel discoveries
+- Creates new `MaterialFinding` entries with source = "investigator_agent"
+- Merged into findings list with visual tag: "AI-discovered finding"
+
+**Test:** Verify agent can create findings not in original signal set.
+
+### Phase I: Traceability & Reproducibility
+
+#### I1: Full Conversation Log
+
+- Write `investigation-conversation.json` with all Claude messages, tool calls, responses
+- Set `temperature: 0` for investigative agent (deterministic with cached data)
+- Record cache keys hit during investigation for reproducibility
+
+#### I2: ToolCallRecord Enhancement
+
+- Add `id: string` for cross-referencing from findings
+- Add `cacheKey?: string` for cache file lookup
+- Add `agentReasoning?: { priorObservation, expectedOutcome, actualConclusion }`
+
+#### I3: USAspending Direct Links
+
+- Every award ID in reports hyperlinks to `https://www.usaspending.gov/award/{internal_id}`
+- Award IDs in evidence CSVs include the link column
+
+#### I4: Provenance Chain Completion
+
+- Fill `fileHashes` in provenance.json (currently empty `{}`)
+- Add cache staleness indicator: "Data cached on YYYY-MM-DD" in report header
+- Record individual API calls in provenance (endpoint + params + response hash)
+
+### Phase J: Dashboard & Report Polish
+
+#### J1: Lightweight Dashboard
+
+- Paginate signal table (top 50, load more on click) instead of rendering all 1,356
+- Lazy-load hypothesis cards
+- Target: <1MB HTML file (currently 19MB)
+- Embed only summary data inline; full data via linked JSON files
+
+#### J2: Concise case.md (Inverted Pyramid)
+
+- Page 1: executive summary + top findings (material findings only)
+- Page 2-3: detailed findings with Five C's structure
+- Appendix: full signal table (collapsed/linked, not inline)
+- Target: <50KB (currently 820KB)
+
+#### J3: "Next Steps" Section
+
+- Per-finding concrete follow-up actions:
+  - R002: "Review sole-source justifications in FPDS for awards X, Y, Z"
+  - R004: "Assess market structure for NAICS 541712"
+  - R006: "Compare pricing to Independent Government Cost Estimate"
+- Include command to re-run with different scope: `investigate run --agency=DoD --recipient=JHU`
+
+#### J4: AI vs Template Visual Tags
+
+- In case.md and dashboard: mark each finding source
+  - `[RULE]` -- detected by indicator engine
+  - `[AI-ENHANCED]` -- enriched by Sonnet narrative
+  - `[AI-DISCOVERED]` -- found by investigative agent (not in original signals)
+
+### Implementation Order (Phases G-J)
+
+| Step | Phase | Est. Effort | Depends On | Impact |
+|------|-------|-------------|------------|--------|
+| 1 | G1: Signal consolidation | 2-3h | Nothing | **Critical** -- transforms the demo |
+| 2 | G2: Entity-scoped evidence | 2h | G1 | **Critical** -- fixes broken evidence |
+| 3 | G3: Executive briefing | 2h | G1 | **Critical** -- the 1-page output |
+| 4 | G4: Five C's structure | 2-3h | G1 | High -- professional audit format |
+| 5 | G5: Case folder redesign | 1-2h | G1-G3 | High -- git-committable output |
+| 6 | H1: `log_reasoning` tool | 1-2h | Nothing | **Critical** -- visible AI reasoning |
+| 7 | H2: `search_usaspending` tool | 2-3h | Nothing | High -- agent can discover new data |
+| 8 | H3: Investigation narrative | 2h | H1 | High -- reasoning as artifact |
+| 9 | H4: New hypothesis generation | 1-2h | H1, G1 | Medium -- agent creates findings |
+| 10 | I1-I4: Traceability | 2-3h | G1 | Medium -- reproducibility |
+| 11 | J1-J4: Dashboard & polish | 3-4h | G1-G4 | Medium -- UX refinement |
+
+**Steps 1-3 and 6-7 can run in parallel.** G1 + H1 are the two critical-path items.
+
+### The Demo Narrative (target)
 
 ```
-npm install vega vega-lite    # Chart rendering (SVG mode, no system deps)
-```
-
-### New Environment Variables (`.env`)
-
-```
-ANTHROPIC_API_KEY=...          # (existing) For Opus 4.6 agent + Sonnet enhancement
-SAM_GOV_API_KEY=...            # (new, optional) Register at sam.gov/profile/details
-OPENSANCTIONS_API_KEY=...      # (new, optional) Register at opensanctions.org/account/
+1. Run: investigate run --agency=DoD --recipient=MIT --period=2023 --deep --charts
+2. Open README.md → 5 key findings, plain English, dollar-weighted
+   "Finding 1: 72% non-competitive rate ($11.4B) — expected for FFRDC, but 3 awards lack justification"
+3. Click finding → entity-specific evidence CSV (MIT's 54 awards, not 10,000)
+4. Investigation Notes section shows AI reasoning:
+   "Step 1: I noticed R002 flagged 72% non-competitive → checked SAM.gov → MIT is FFRDC →
+    Step 2: Compared to JHU (similar FFRDC): 68% non-competitive → Pattern is structural →
+    Step 3: But awards FA8702-23-F0001, N6600123C4506, N6600123C4513 have no justification code →
+    Conclusion: These 3 awards ($48M total) warrant manual review of sole-source justification"
+5. Open dashboard.html → lightweight, <1MB, paginated, interactive
+6. verification.json → every finding backed by evidence chain → API source
 ```
 
 ---
@@ -515,34 +637,13 @@ POST /match/default
 
 ---
 
-## Visual Evidence Strategy
+## Visual Evidence Strategy (Implemented)
 
-### Approach: Vega-Lite SVG + Self-Contained HTML Dashboard
+**Server-side rendering:** `vega` + `vega-lite` packages, SVG mode (no `node-canvas` needed). Adaptive log-scale binning for skewed data (>100x range).
 
-**Server-side rendering (CLI output):**
-- NPM packages: `vega`, `vega-lite`
-- SVG export works without `node-canvas` (no system dependencies)
-- Pattern: Create Vega-Lite spec -> compile to Vega -> initialize server-side View (renderer: 'none') -> export via `.toSVG()`
-- SVG files written to `evidence/` directory alongside CSV tables
+**6 chart types:** Award Distribution Histogram (always), Vendor Concentration Donut (R004), Competition Breakdown Bar (R001/R002), Price Outlier Scatter (R006), Modification Timeline (R005), Threshold Clustering (R003).
 
-**Chart types per indicator:**
-
-| Chart | Indicator | Vega-Lite Mark |
-|-------|-----------|----------------|
-| Award Distribution Histogram | Always | `bin` + `bar` |
-| Vendor Concentration Pie/Donut | R004 | `arc` |
-| Competition Breakdown Stacked Bar | R001, R002 | `bar` (stacked) |
-| Price Outlier Scatter | R006 | `point` |
-| Modification Timeline | R005 | `line` |
-| Threshold Clustering Histogram | R003 | `bin` + `bar` + `rule` |
-
-**Interactive HTML Dashboard (`dashboard.html`):**
-- Vega-Lite + Vega-Embed loaded from jsDelivr CDN
-- All data embedded inline as JSON (awards, signals, hypotheses)
-- `simple-datatables` CDN for interactive signal table (sortable, filterable)
-- Sections: Executive Summary, interactive signal table, charts per hypothesis, evidence links, provenance
-- Single self-contained HTML file, opens in any browser, no server needed
-- Template approach: build HTML string with interpolated data, write to case folder
+**Dashboard:** `dashboard.html` -- self-contained HTML with Vega-Embed from CDN, inline JSON data, sortable tables. **Note:** Currently 19MB due to embedding all 10K awards. Phase J1 will fix this with pagination and lazy-loading.
 
 ---
 
@@ -562,7 +663,7 @@ POST /match/default
 | Testing | `vitest` | Fast, ESM-native, Jest-compatible | 4.x |
 | Env | `dotenv` | Load ANTHROPIC_API_KEY from .env | |
 
-**Planned additions:** `vega` + `vega-lite` (SVG chart rendering, no system deps).
+All dependencies installed and operational.
 
 ---
 
@@ -636,6 +737,48 @@ These issues are now **documented in the report output** but not yet structurall
 2. **Awards with start dates outside the query range** -- Documented in the Data Scope section. Could add a "period_obligation" field by summing transactions within the date range.
 3. **Cross-agency R004 when `--agency` is used** -- Concentration is computed per agency already, but with `--agency` filter, there's only one agency in the dataset. Not yet suppressed (less obvious tautology than recipient filtering).
 4. **R006 IQR on filtered data** -- The caveat is now shown, but a future enhancement could fetch market-wide peer data for the same NAICS codes to compute a true market IQR.
+
+---
+
+## Output Quality Audit (2026-02-11)
+
+Three-perspective deep-dive (domain expert, agentic architect, end-user advocate) analyzing the DoD-MIT case output. Full findings drive Phases G-J above.
+
+### Domain Expert: Audit Methodology Gaps
+
+**Key finding:** The report lacks the GAO Yellow Book's **Five C's framework** (Condition, Criteria, Cause, Effect, Recommendation). Current output provides Condition (partially) but completely lacks Cause, Effect, and Recommendation.
+
+**Signal-to-finding escalation missing:** Professional auditors distinguish observation → flag → finding → material finding. All 1,356 signals are treated equally regardless of dollar significance.
+
+**Context that turns anomalies into leads (currently absent):**
+- Justification codes: WHY was this sole-sourced? (`other_than_full_and_open` available in data but not surfaced)
+- Entity type: Is sole-source expected? (FFRDC, Foreign Military Sales, UARC)
+- Contract type: IDIQ delivery orders vs. new standalone contracts
+- Comparative baselines: How does this compare to agency/NAICS averages?
+
+### Agentic Architecture Expert: Agent Reasoning Gaps
+
+**Key finding:** The agent is a **well-structured API caller** but lacks **reasoning visibility**. The investigation process is opaque -- users see conclusions but not the path to them.
+
+**Four architectural gaps:**
+1. **No theory formation:** Agent receives pre-computed hypotheses, can't form its own
+2. **No iterative refinement:** No structural checkpoint where agent re-evaluates its plan
+3. **No discovery-driven branching:** `fetch_comparable_awards` only searches in-memory data (circular when investigating a single recipient)
+4. **No negative evidence tracking:** Dead ends are not recorded
+
+**Highest-ROI change:** `log_reasoning` tool (zero implementation cost, transforms output). The agent calls it before/after each tool use to externalize its thinking. This produces a transparent audit trail of the investigation process.
+
+### End-User Advocate: Output UX Problems
+
+**Key finding:** The output is built for completeness, not comprehension. A journalist, auditor, or citizen would close the folder within 30 seconds.
+
+**Critical metrics:**
+- case.md: 820KB / 10,907 lines (unreadable)
+- dashboard.html: 19MB (chokes browsers)
+- Evidence: 883 files / 550MB (unnavigable, not git-committable)
+- Evidence CSVs are duplicated: every R002 hypothesis links to same 10K-row CSV
+
+**The inverted pyramid principle:** Most important information first, progressive disclosure for detail. Currently the opposite -- firehose of undifferentiated data that buries the 3 genuinely interesting findings under 610 identical ones.
 
 ---
 
@@ -774,43 +917,44 @@ signals:
 
 ## Enhancement Roadmap
 
-### Completed
+### Completed (Phases 0-F + QueryContext)
 
-| Enhancement | Status |
-|-------------|--------|
-| **Prover agent** -- CSV evidence tables per hypothesis | Done |
-| **Transaction integration** -- `--with-transactions` flag for R005 | Done |
-| **AI-enhanced narrator** -- Claude refines per-hypothesis text | Done |
-| **Broader demo support** -- `--agency` is now optional | Done |
-| **Phase A** -- Multi-source enrichment clients (SAM.gov, OpenSanctions, sub-awards) | Done |
-| **Phase B** -- Opus 4.6 investigative agent (tool-calling loop, `--deep`) | Done |
-| **Phase C** -- Vega-Lite visual evidence (6 chart types + SVG renderer) | Done |
-| **Phase D** -- Interactive HTML dashboard (`dashboard.html`) | Done |
-| **Phase E** -- Pipeline integration + CLI flags (`--deep`, `--charts`, `--no-ai`) | Done |
-| **Phase F** -- Tests (enrichment, investigator, charts) | Done |
-| **QueryContext propagation** -- fix 5 systemic data interpretation issues | Done |
+| Phase | Enhancement | Status |
+|-------|-------------|--------|
+| 0 | Project plan, API exploration, hackathon brief | Done |
+| 1-5 | Core pipeline: collector, signaler, hypothesizer, prover, narrator, verifier | Done |
+| -- | Prover agent, transaction integration, AI narrator, broader demo support | Done |
+| A | Multi-source enrichment clients (SAM.gov, OpenSanctions, sub-awards) | Done |
+| B | Opus 4.6 investigative agent (tool-calling loop, `--deep`) | Done |
+| C | Vega-Lite visual evidence (6 chart types + SVG renderer) | Done |
+| D | Interactive HTML dashboard (`dashboard.html`) | Done |
+| E | Pipeline integration + CLI flags (`--deep`, `--charts`, `--no-ai`) | Done |
+| F | Tests (enrichment, investigator, charts) -- 80 total | Done |
+| -- | QueryContext propagation (5 data interpretation fixes) | Done |
 
-### Next: Output Quality Hardening
+### Next: Phases G-J (Output Quality Revolution)
 
-| Enhancement | What | Priority |
-|-------------|------|----------|
-| Period-specific obligation amounts | Use transaction sums instead of cumulative `awardAmount` for period-scoped metrics | High |
-| Cross-agency R004 suppression | Suppress trivially inevitable R004 when `--agency` filter yields a single agency | Medium |
-| Market-wide R006 peer groups | Fetch NAICS peers beyond the filtered dataset for true market IQR | Medium |
-| Recipient deduplication | Use `recipient_id` hash + parent company lookup from SAM.gov | Medium |
-| Bulk download fallback | `/download/awards/` for >10K record slices | Low |
+See "Next Implementation: Phases G-J" section above for detailed specifications.
+
+| Phase | What | Priority | Est. Effort |
+|-------|------|----------|-------------|
+| **G** | Output quality revolution (consolidation, evidence, briefing, Five C's, folder) | **Critical** | 10-12h |
+| **H** | Visible agent reasoning (`log_reasoning`, `search_usaspending`, narrative) | **Critical** | 6-8h |
+| **I** | Traceability & reproducibility (conversation log, provenance chain) | Medium | 2-3h |
+| **J** | Dashboard & report polish (lightweight, concise, next steps, AI tags) | Medium | 3-4h |
 
 ### Long-Term (post-hackathon)
 
 | Enhancement | What |
 |-------------|------|
+| Period-specific obligation amounts | Use transaction sums instead of cumulative `awardAmount` |
+| Cross-agency R004 suppression | Suppress when `--agency` yields single agency |
+| Market-wide R006 peer groups | Fetch NAICS peers beyond filtered dataset |
 | OCDS data format support | International procurement datasets |
 | Beneficial ownership (BODS) | Link suppliers to ultimate owners |
 | Network analysis | Entity relationship graphs |
 | More indicators | Expand from 6 to OCP's full 73-indicator catalogue |
-| CI/CD integration | Auto-run on schedule, alert on new signals |
 | Recipient deduplication | Use `recipient_id` hash + parent company lookup |
-| Bulk download fallback | `/download/awards/` for >10K record slices |
 
 ---
 
@@ -818,25 +962,27 @@ signals:
 
 To resume development:
 
-1. **Read this document** -- contains full implementation state and decisions
+1. **Read this document** -- contains full implementation state, output quality audit, and Phases G-J plan
 2. **Check git log** -- `git log --oneline` shows what's committed
 3. **Run tests** -- `npm test` (80 tests, all should pass)
 4. **Run typecheck** -- `npm run typecheck` (should be clean)
-5. **Check cache** -- `.cache/` preserves API data; re-runs are instant
-6. **Check cases/** -- previous investigation outputs preserved
-7. **Read "Data Interpretation Issues"** section -- documents known USAspending API semantics that affect output quality
+5. **Check cache** -- `.cache/` preserves API data; re-runs are instant with `--no-ai`
+6. **Review the output quality issues** -- "Output Quality Audit" section documents what's wrong with current output
+7. **Start with Phase G1** (signal consolidation) -- this unblocks most other phases
 
 ### Key files for context
 
 | File | Purpose |
 |------|---------|
-| `docs/PROJECT_PLAN.md` | This document -- full implementation state |
+| `docs/PROJECT_PLAN.md` | This document -- full state, audit findings, and Phases G-J specs |
 | `docs/PROJECT_BRIEF.md` | Hackathon-ready project description |
 | `docs/api-analysis.md` | USAspending field-to-indicator mapping |
 | `config/default.yaml` | All configurable thresholds |
-| `src/signaler/types.ts` | Core Indicator interface |
-| `src/shared/types.ts` | All shared type definitions |
-| `src/prover/analyzer.ts` | Evidence generation per hypothesis |
-| `src/narrator/enhancer.ts` | AI narrative enrichment |
-| `src/orchestrator/pipeline.ts` | 8-step pipeline runner with QueryContext propagation |
-| `exploration/README.md` | API exploration findings |
+| `src/shared/types.ts` | Core types: Signal, QueryContext, InvestigationFindings, etc. |
+| `src/signaler/engine.ts` | Signal engine with QueryContext propagation |
+| `src/investigator/agent.ts` | Opus 4.6 investigative agent (target for Phase H) |
+| `src/investigator/tools.ts` | Agent tool definitions (add `log_reasoning` + `search_usaspending` here) |
+| `src/prover/analyzer.ts` | Evidence generation (fix entity scoping in Phase G2) |
+| `src/narrator/report.ts` | Report assembly (simplify in Phase J2) |
+| `src/orchestrator/pipeline.ts` | 8-step pipeline (add consolidation step in Phase G1) |
+| `cases/case-2026-02-11/` | Current output to reference -- the 820KB/550MB problem |
