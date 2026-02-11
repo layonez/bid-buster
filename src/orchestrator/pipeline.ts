@@ -278,7 +278,7 @@ export async function runInvestigation(
   // ─── Step 8: Verify ───────────────────────────────────────────────────
   logger.info(`Step 8/${totalSteps}: Verifying report claims...`);
 
-  const verification = verifyReport(report, signalResult, queryContext);
+  const verification = verifyReport(report, signalResult, queryContext, materialFindings);
   logger.info(
     { claims: verification.totalClaims, supported: verification.supported, unsupported: verification.unsupported },
     verification.passed ? "Verification passed" : "Verification found unsupported claims",
@@ -301,18 +301,17 @@ export async function runInvestigation(
   await writeFile(join(caseFolder.path, "dashboard.html"), dashboardHtml, "utf-8");
   await writeJson(caseFolder.provenancePath, provenance);
 
-  // Data files -> data/ subdirectory
+  // Data files -> data/ subdirectory (canonical location for all JSON artifacts)
   await writeJson(join(caseFolder.dataDir, "signals.json"), signalResult);
   await writeJson(join(caseFolder.dataDir, "hypotheses.json"), enhancedHypotheses);
   await writeJson(join(caseFolder.dataDir, "verification.json"), verification);
-  await writeJson(join(caseFolder.dataDir, "awards.json"), collectorResult.awards);
   await writeJson(join(caseFolder.dataDir, "evidence-manifest.json"), evidence);
   await writeJson(join(caseFolder.dataDir, "findings.json"), materialFindings);
 
-  // Also keep top-level JSON symlinks for backwards compatibility
-  await writeJson(join(caseFolder.path, "signals.json"), signalResult);
-  await writeJson(join(caseFolder.path, "hypotheses.json"), enhancedHypotheses);
-  await writeJson(join(caseFolder.path, "verification.json"), verification);
+  // Raw awards data is large (~11 MB for DoD); only write with --full-evidence
+  if (options.fullEvidence) {
+    await writeJson(join(caseFolder.dataDir, "awards.json"), collectorResult.awards);
+  }
 
   if (investigationFindings) {
     await writeJson(join(caseFolder.dataDir, "investigation.json"), investigationFindings);

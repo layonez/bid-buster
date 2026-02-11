@@ -11,6 +11,7 @@ import type { DashboardData, Signal, Hypothesis, EvidenceArtifact, MaterialFindi
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SIGNAL_PAGE_SIZE = 50;
+const SIGNAL_CONTEXT_MAX_LENGTH = 120;
 const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 // ─── HTML Escaping (XSS Prevention) ────────────────────────────────────────
@@ -232,15 +233,25 @@ ${buildStyles()}
     title: data.title,
     generatedAt: data.generatedAt,
     params: data.params,
-    signals: displaySignals,
+    signals: displaySignals.map((s) => ({ ...s, context: truncateContext(s.context) })),
     totalSignalCount: signals.length,
-    hypotheses: displayHypotheses,
+    hypotheses: displayHypotheses.map((h) => ({
+      id: h.id, signalIds: h.signalIds, question: h.question,
+      context: h.context.slice(0, 300),
+      evidenceNeeded: h.evidenceNeeded.slice(0, 3),
+      severity: h.severity,
+    })),
     totalHypothesisCount: allNonExec.length,
     evidence: displayEvidence.map((e) => ({ id: e.id, hypothesisId: e.hypothesisId, type: e.type, title: e.title, filePath: e.filePath })),
     totalEvidenceCount: evidence.length,
     charts: charts.map((c) => ({ id: c.id, title: c.title, description: c.description })),
-    provenance: data.provenance,
-    materialFindings: materialFindings ?? [],
+    provenance: { timestamp: data.provenance.timestamp, toolVersion: data.provenance.toolVersion, gitCommit: data.provenance.gitCommit },
+    materialFindings: (materialFindings ?? []).map((f) => ({
+      id: f.id, entityName: f.entityName, indicatorId: f.indicatorId, indicatorName: f.indicatorName,
+      severity: f.severity, materialityScore: f.materialityScore, totalDollarValue: f.totalDollarValue,
+      signalCount: f.signalCount, affectedAwardIds: f.affectedAwardIds.slice(0, 10),
+      fiveCs: f.fiveCs, aiTag: f.aiTag,
+    })),
     investigationFindings: data.investigationFindings
       ? {
           summary: data.investigationFindings.summary,
@@ -288,7 +299,7 @@ function buildMaterialFindingsSection(findings: MaterialFinding[]): string {
           <div class="five-c"><strong>Effect:</strong> ${escapeHtml(f.fiveCs.effect)}</div>
           <div class="five-c recommendation"><strong>Recommendation:</strong> ${escapeHtml(f.fiveCs.recommendation)}</div>
         </div>`
-      : `<p>${escapeHtml(f.signals[0]?.context ?? "")}</p>`;
+      : `<p>${escapeHtml(truncateContext(f.signals[0]?.context ?? ""))}</p>`;
 
     return `<div class="finding-card ${sevClass}">
       <div class="finding-header">
@@ -324,7 +335,7 @@ function buildSignalTable(signals: Signal[], totalCount: number): string {
         <td>${escapeHtml(s.entityName)}</td>
         <td class="num">${s.value}</td>
         <td class="num">${s.threshold}</td>
-        <td>${escapeHtml(s.context)}</td>
+        <td>${escapeHtml(truncateContext(s.context))}</td>
       </tr>`;
     })
     .join("\n");
@@ -497,13 +508,49 @@ function buildInvestigationSection(findings: NonNullable<DashboardData["investig
   </section>`;
 }
 
+/**
+ * Truncate chart spec inline data to a max sample size for dashboard embedding.
+ * Charts are already rendered as SVGs; the inline Vega-Embed is for interactive
+ * exploration and doesn't need all 10K points -- a representative sample suffices.
+ */
+const CHART_DATA_SAMPLE_LIMIT = 500;
+
+function truncateChartSpec(spec: Record<string, unknown>): Record<string, unknown> {
+  const clone = JSON.parse(JSON.stringify(spec)) as Record<string, unknown>;
+
+  // Direct data.values
+  if (clone.data && typeof clone.data === "object") {
+    const d = clone.data as Record<string, unknown>;
+    if (Array.isArray(d.values) && d.values.length > CHART_DATA_SAMPLE_LIMIT) {
+      d.values = d.values.slice(0, CHART_DATA_SAMPLE_LIMIT);
+    }
+  }
+
+  // Layer specs (e.g., threshold clustering has multiple layers)
+  if (Array.isArray(clone.layer)) {
+    for (const layer of clone.layer) {
+      if (layer && typeof layer === "object") {
+        const l = layer as Record<string, unknown>;
+        if (l.data && typeof l.data === "object") {
+          const d = l.data as Record<string, unknown>;
+          if (Array.isArray(d.values) && d.values.length > CHART_DATA_SAMPLE_LIMIT) {
+            d.values = d.values.slice(0, CHART_DATA_SAMPLE_LIMIT);
+          }
+        }
+      }
+    }
+  }
+
+  return clone;
+}
+
 function buildChartScripts(charts: { id: string; spec: Record<string, unknown> }[]): string {
   if (charts.length === 0) return "";
 
   const embedCalls = charts
     .map(
       (c) =>
-        `  vegaEmbed('#chart-${c.id}', ${escapeJsonForScript(c.spec)}, {actions: {source: false, compiled: false}}).catch(function(err) { console.warn('Chart ${c.id}:', err); });`,
+        `  vegaEmbed('#chart-${c.id}', ${escapeJsonForScript(truncateChartSpec(c.spec))}, {actions: {source: false, compiled: false}}).catch(function(err) { console.warn('Chart ${c.id}:', err); });`,
     )
     .join("\n");
 
@@ -521,6 +568,11 @@ ${embedCalls}
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+function truncateContext(context: string): string {
+  if (context.length <= SIGNAL_CONTEXT_MAX_LENGTH) return context;
+  return context.slice(0, SIGNAL_CONTEXT_MAX_LENGTH - 3) + "...";
+}
 
 function severityBadge(severity: string): string {
   return `<span class="severity severity-${escapeHtml(severity)}">${escapeHtml(severity.toUpperCase())}</span>`;

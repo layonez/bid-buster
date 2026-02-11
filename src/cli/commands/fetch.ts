@@ -8,7 +8,7 @@ import { runCollector } from "../../collector/index.js";
 
 export const fetchCommand = new Command("fetch")
   .description("Collect procurement data from USAspending API")
-  .requiredOption("--agency <name>", "Agency name or code")
+  .option("--agency <name>", "Agency name or code")
   .option("--subtier-agency <name>", "Subtier agency name (e.g., 'Federal Emergency Management Agency')")
   .option("--recipient <name>", "Recipient name or UEI")
   .option(
@@ -25,6 +25,11 @@ export const fetchCommand = new Command("fetch")
   .option("--with-details", "Fetch individual award details", false)
   .option("--with-transactions", "Fetch modification history", false)
   .action(async (options, command) => {
+    if (!options.agency && !options.subtierAgency && !options.recipient) {
+      console.error("Error: At least one of --agency, --subtier-agency, or --recipient is required.");
+      process.exit(1);
+    }
+
     const parentOpts = command.parent?.opts() ?? {};
     const config = await loadConfig(parentOpts.config);
     const logger = createLogger(parentOpts.verbose);

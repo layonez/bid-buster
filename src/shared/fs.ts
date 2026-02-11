@@ -1,9 +1,10 @@
 /**
  * File system helpers for case folder management.
  */
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import type { CaseFolder } from "./types.js";
 
 export interface CaseFolderOptions {
@@ -69,6 +70,13 @@ export async function createCaseFolder(
   const summaryEvidenceDir = join(evidenceDir, "summary");
   const detailEvidenceDir = join(evidenceDir, "detail");
   const chartsDir = join(evidenceDir, "charts");
+
+  // Clean existing case folder to avoid stale files from previous runs.
+  // The folder name is deterministic (based on date + params), so re-runs
+  // on the same day would otherwise leave old evidence/data files behind.
+  if (existsSync(casePath)) {
+    await rm(casePath, { recursive: true, force: true });
+  }
 
   const dirs: CaseFolder = {
     path: casePath,

@@ -2,7 +2,7 @@
  * Verifier agent: cross-checks claims in the report against signal data.
  * Ensures every factual statement is backed by computed evidence.
  */
-import type { Signal, QueryContext } from "../shared/types.js";
+import type { Signal, QueryContext, MaterialFinding } from "../shared/types.js";
 import type { SignalEngineResult } from "../signaler/types.js";
 
 export interface VerificationResult {
@@ -22,16 +22,27 @@ interface VerificationDetail {
 /**
  * Verify that signal-derived claims in the report match computed data.
  * Returns a verification report; sets passed=false if unsupported claims found.
+ *
+ * When materialFindings are provided, only signals belonging to those findings
+ * are checked (since the report only renders material-finding-linked hypotheses).
  */
 export function verifyReport(
   reportContent: string,
   signalResult: SignalEngineResult,
   queryContext?: QueryContext,
+  materialFindings?: MaterialFinding[],
 ): VerificationResult {
   const details: VerificationDetail[] = [];
 
+  // When material findings exist, only verify signals that correspond to rendered content.
+  // The report truncates hypotheses to those matching material findings, so verifying
+  // all signals would produce false "unsupported" claims for truncated hypotheses.
+  const signalsToVerify = materialFindings && materialFindings.length > 0
+    ? filterSignalsToMaterialFindings(signalResult.signals, materialFindings)
+    : signalResult.signals;
+
   // Check 1: Every signal referenced in the report exists in signal data
-  for (const signal of signalResult.signals) {
+  for (const signal of signalsToVerify) {
     const idPresent = reportContent.includes(signal.indicatorId);
     const namePresent = reportContent.includes(signal.indicatorName);
 
@@ -43,7 +54,7 @@ export function verifyReport(
   }
 
   // Check 2: Key numeric values from signals appear in report
-  for (const signal of signalResult.signals) {
+  for (const signal of signalsToVerify) {
     // Check value
     const valueStr = String(signal.value);
     const valuePresent = reportContent.includes(valueStr);
@@ -85,7 +96,7 @@ export function verifyReport(
 
   // Check 6: Tautological R004 detection (safety net)
   if (queryContext?.isRecipientFiltered) {
-    for (const signal of signalResult.signals) {
+    for (const signal of signalsToVerify) {
       if (
         signal.indicatorId === "R004" &&
         queryContext.recipientFilter &&
@@ -117,4 +128,23 @@ export function verifyReport(
     details,
     passed: unsupported === 0,
   };
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Filter signals to only those that belong to material findings.
+ * Uses the same (indicatorId, entityName) grouping key used by the consolidator
+ * and by report.ts when selecting which hypotheses to render.
+ */
+function filterSignalsToMaterialFindings(
+  signals: Signal[],
+  findings: MaterialFinding[],
+): Signal[] {
+  const findingKeys = new Set<string>();
+  for (const f of findings) {
+    findingKeys.add(`${f.indicatorId}|||${f.entityName}`);
+  }
+
+  return signals.filter((s) => findingKeys.has(`${s.indicatorId}|||${s.entityName}`));
 }
