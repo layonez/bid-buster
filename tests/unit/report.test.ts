@@ -95,4 +95,28 @@ describe("Report Assembly", () => {
     expect(report).toContain("Open Contracting Partnership");
     expect(report).toContain("OECD");
   });
+
+  it("should include evidence artifact links when provided", () => {
+    const data = makeReportData();
+    data.evidence = [
+      {
+        id: "E-R002-MIT-breakdown",
+        hypothesisId: "H-R002-MIT",
+        type: "csv",
+        title: "Competition Breakdown",
+        description: "Breakdown of awards by competition type",
+        filePath: "evidence/H-R002-MIT-competition-breakdown.csv",
+        metadata: {},
+      },
+    ];
+    const report = assembleReport(data);
+    expect(report).toContain("Supporting evidence:");
+    expect(report).toContain("Competition Breakdown");
+    expect(report).toContain("evidence/H-R002-MIT-competition-breakdown.csv");
+  });
+
+  it("should label evidence needed as 'for further review'", () => {
+    const report = assembleReport(makeReportData());
+    expect(report).toContain("Evidence needed for further review:");
+  });
 });

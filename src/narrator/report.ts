@@ -97,7 +97,20 @@ export function assembleReport(data: ReportData): string {
     lines.push("");
     lines.push(hypothesis.context);
     lines.push("");
-    lines.push("**Evidence needed:**");
+
+    // Link evidence artifacts for this hypothesis
+    const relatedEvidence = data.evidence.filter(
+      (e) => e.hypothesisId === hypothesis.id,
+    );
+    if (relatedEvidence.length > 0) {
+      lines.push("**Supporting evidence:**");
+      for (const artifact of relatedEvidence) {
+        lines.push(`- [${artifact.title}](${artifact.filePath}) -- ${artifact.description}`);
+      }
+      lines.push("");
+    }
+
+    lines.push("**Evidence needed for further review:**");
     for (const need of hypothesis.evidenceNeeded) {
       lines.push(`- ${need}`);
     }

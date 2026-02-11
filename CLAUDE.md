@@ -25,7 +25,7 @@ Every finding must be:
 When starting a new session on this project:
 
 1. Read `docs/PROJECT_PLAN.md` -- comprehensive implementation state, decisions, and roadmap
-2. Run `npm test` -- 24 tests, all should pass
+2. Run `npm test` -- 31 tests, all should pass
 3. Run `npm run typecheck` -- should be clean (zero errors)
 4. The `.cache/` directory has API data from previous runs (instant re-runs)
 5. Check `git log --oneline` to see latest work
@@ -52,15 +52,18 @@ When starting a new session on this project:
 ## Architecture in 30 Seconds
 
 ```
-investigate run --agency=X --period=Y [--recipient=Z]
+investigate run --agency=X --period=Y [--recipient=Z] [--deep] [--charts]
 
-  1. Collector   → USAspending API → paginate → cache → normalize
-  2. Signaler    → 6 indicators × fold/finalize → signal table
-  3. Hypothesis  → templates + Claude AI → non-accusatory questions
-  4. Narrator    → case.md (disclaimer, signals, hypotheses, methodology, provenance)
-  5. Verifier    → cross-check every claim against signal data → pass/fail
+  1. Collector    → USAspending API → paginate → cache → normalize
+  2. Signaler     → 6 indicators × fold/finalize → signal table
+  3. Investigator → Opus 4.6 agent examines signals, fetches enrichment, iterates (--deep)
+  4. Hypothesis   → templates + agent findings → non-accusatory questions
+  5. Prover       → CSV tables + SVG charts → evidence/ directory
+  6. Enhancer     → AI-refined per-hypothesis narrative (Claude Sonnet)
+  7. Narrator     → case.md + dashboard.html (disclaimer, signals, hypotheses, evidence)
+  8. Verifier     → cross-check every claim against signal data → pass/fail
 
-Output: cases/case-YYYY-MM-DD/ (case.md + JSON artifacts + provenance)
+Output: cases/case-YYYY-MM-DD/ (case.md + dashboard.html + JSON artifacts + evidence/)
 ```
 
 ---
@@ -182,7 +185,7 @@ Every indicator MUST:
 
 ## What NOT to Do
 
-- Don't break the 5-step pipeline contract (Collect → Signal → Hypothesize → Report → Verify)
+- Don't break the 8-step pipeline contract (Collect → Signal → Investigate → Hypothesize → Prove → Enhance → Report → Verify)
 - Don't bypass the verifier -- if claims are unsupported, fix the narrator, don't disable verification
 - Don't commit `.env`, `.cache/`, `cases/`, or `node_modules/`
 - Don't commit `references/cardinal-rs/`, `references/kingfisher-collect/`, `references/ocdskit/` (gitignored, local-only)
@@ -204,12 +207,25 @@ Every indicator MUST:
 
 ## Current State (update after each session)
 
-**MVP is complete.** 31 TypeScript files, ~3,100 lines, 24 tests passing.
+**Enhanced MVP is complete.** 33 TypeScript files, ~3,900 lines, 31 tests passing.
 
-Working end-to-end pipeline: `investigate run --agency="Department of Defense" --recipient="MIT" --period=2023-01-01:2023-12-31` produces a verified case folder with AI-enhanced executive assessment.
+Working 7-step pipeline: `investigate run --agency="Department of Defense" --recipient="MIT" --period=2023-01-01:2023-12-31` produces a verified case folder with:
+- CSV evidence tables per hypothesis in `evidence/` directory
+- AI-enhanced per-hypothesis narratives (Claude Sonnet)
+- AI executive assessment
+- Evidence artifact links in case.md
+- Transaction support via `--with-transactions` flag for R005
 
-**Next priorities** (see `docs/PROJECT_PLAN.md` → Next Stages):
-1. Prover agent -- evidence charts/tables per hypothesis
-2. Broader demo -- agency-only investigation for diverse signals
-3. Transaction integration for R005 (modifications indicator)
-4. AI-enhanced narrator for richer per-hypothesis text
+**Completed enhancements:**
+1. Prover agent -- CSV evidence tables per hypothesis (all 6 indicators + master summary)
+2. AI-enhanced narrator -- Claude refines each hypothesis with balanced analysis
+3. Transaction integration -- `--with-transactions` flag feeds R005 indicator
+4. Broader demo support -- `--agency` is now optional (at least one of --agency or --recipient required)
+
+**Next: Opus 4.6 Investigative Agent** (see `docs/PROJECT_PLAN.md` → Next Implementation):
+- Phase A: Multi-source enrichment clients (SAM.gov, OpenSanctions, sub-awards)
+- Phase B: Opus 4.6 autonomous investigative agent (tool-calling loop)
+- Phase C: Vega-Lite visual evidence (SVG charts)
+- Phase D: Interactive HTML dashboard
+- Phase E: Pipeline integration + CLI flags (`--deep`, `--charts`)
+- Phase F: Tests for all new components

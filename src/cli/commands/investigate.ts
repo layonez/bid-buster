@@ -1,6 +1,6 @@
 /**
  * Main investigation command: runs the full pipeline.
- * Collector → Signaler → Hypothesis → Narrator → case folder
+ * Collector → Signaler → Hypothesis → Prover → Narrator → Verifier → case folder
  */
 import { Command } from "commander";
 import { loadConfig } from "../config.js";
@@ -9,7 +9,7 @@ import { runInvestigation } from "../../orchestrator/pipeline.js";
 
 export const investigateCommand = new Command("run")
   .description("Run a full investigation pipeline")
-  .requiredOption("--agency <name>", "Agency name or code")
+  .option("--agency <name>", "Agency name (e.g., 'Department of Defense')")
   .option("--recipient <name>", "Recipient name or UEI")
   .option(
     "--period <range>",
@@ -21,7 +21,13 @@ export const investigateCommand = new Command("run")
     "Award type codes (comma-separated)",
     "A,B,C,D",
   )
+  .option("--with-transactions", "Fetch modification history for R005 indicator", false)
   .action(async (options) => {
+    if (!options.agency && !options.recipient) {
+      console.error("Error: At least one of --agency or --recipient is required.");
+      process.exit(1);
+    }
+
     const parentOpts = options.parent?.parent?.opts() ?? {};
     const config = await loadConfig(parentOpts.config);
     const logger = createLogger(parentOpts.verbose);
@@ -44,12 +50,16 @@ export const investigateCommand = new Command("run")
       },
       config,
       logger,
+      { withTransactions: options.withTransactions },
     );
 
     console.log(`\nCase folder: ${casePath}`);
-    console.log(`  case.md          - Investigation report`);
-    console.log(`  signals.json     - Red-flag signals`);
-    console.log(`  hypotheses.json  - Generated hypotheses`);
-    console.log(`  awards.json      - Normalized award data`);
-    console.log(`  provenance.json  - Run metadata`);
+    console.log(`  case.md              - Investigation report`);
+    console.log(`  signals.json         - Red-flag signals`);
+    console.log(`  hypotheses.json      - Generated hypotheses`);
+    console.log(`  awards.json          - Normalized award data`);
+    console.log(`  evidence-manifest.json - Evidence artifact references`);
+    console.log(`  evidence/            - CSV evidence tables`);
+    console.log(`  verification.json    - Claim verification results`);
+    console.log(`  provenance.json      - Run metadata & audit trail`);
   });
