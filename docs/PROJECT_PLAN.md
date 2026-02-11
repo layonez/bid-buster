@@ -1,7 +1,7 @@
 # Procurement Investigator - Project Plan
 
-> **Last updated:** 2026-02-11
-> **Current stage:** Full pipeline implemented (Phases A-F + QueryContext). Output quality audit complete. Next: Phases G-J (output revolution, visible agent reasoning, traceability).
+> **Last updated:** 2026-02-11 (evening session)
+> **Current stage:** Phases G-J implemented (consolidation, Five C's, briefing, narrative, dashboard polish). 100 tests passing. Next: Phase K (entity-scoped evidence, dashboard <1 MB, finding diversity, bug fixes).
 
 ## Executive Summary
 
@@ -9,9 +9,11 @@
 
 **Key differentiator:** Investigation-as-Code -- every finding is reproducible, every claim is verified against computed evidence, every run produces a git-committable case folder with CSV evidence files.
 
-**Current challenge: From data scan to analyst-grade investigation.** The full technical pipeline works -- 8-step collect→signal→investigate→hypothesize→prove→enhance→report→verify. But an output quality audit revealed the gap: **the tool produces 1,356 signals where it should produce 5-10 material findings.** The output overwhelms rather than informs. The AI agent's reasoning is invisible. Evidence CSVs are generic data dumps rather than entity-specific proof.
+**Phases G-J complete:** Signals now consolidate from 1,356 → 20 material findings with Five C's audit structure. README.md briefing provides a 1-page entry point. Dashboard halved from 19 MB → 10 MB. Agent reasoning tools (`log_reasoning`, `create_finding`) are operational. 100 tests passing.
 
-**Next evolution:** Close the gap between "red flag detection" (what rules engines do) and "investigation-as-code" (what we promised). This means: (1) material findings with dollar-weighted severity instead of flat signal lists, (2) visible agent reasoning -- a `log_reasoning` tool that makes the AI's investigation narrative a first-class artifact, (3) entity-scoped evidence that traces from finding → evidence → API source, and (4) a concise executive briefing that tells a story in 1 page.
+**Current challenge: File size.** The analytical framework is solid but the output folder is still 543 MB because evidence CSVs remain global 10K-row dumps (518 MB) and the dashboard still inlines all data (10 MB). Phase K addresses this: entity-scoped evidence filtering, dashboard external data loading, and report truncation will bring the case folder under 10 MB.
+
+**Secondary challenge: Finding diversity.** 19 of 20 findings are R006 price outliers because single mega-dollar awards dominate the materiality score. Phase K adds per-indicator caps to force diversity across indicator types.
 
 ---
 
@@ -21,27 +23,27 @@
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| CLI (commander) | 5 | ~420 | Complete -- 3 commands: `run`, `fetch`, `signal`; `--with-transactions`, `--deep`, `--charts` flags |
+| CLI (commander) | 5 | ~430 | Complete -- 3 commands: `run`, `fetch`, `signal`; `--with-transactions`, `--deep`, `--charts`, `--full-evidence` flags |
 | Collector (API client) | 4 | ~679 | Complete -- pagination, throttling, caching, detail + transaction enrichment |
 | Normalizer | 3 | ~167 | Complete -- search results, award details, transactions |
-| Signaler (6 indicators) | 9 | ~1,070 | Complete -- all 6 indicators with configurable thresholds + QueryContext awareness |
+| Signaler (6 indicators + consolidator) | 10 | ~1,170 | Complete -- all 6 indicators + MaterialFinding consolidation with materiality scoring |
 | Enrichment clients | 4 | ~600 | Complete -- SAM.gov, OpenSanctions, sub-awards clients |
-| Investigator (Opus 4.6) | 2 | ~400 | Complete -- autonomous tool-calling agent with enrichment |
-| Hypothesis Maker | 2 | ~214 | Complete -- templates + Claude AI executive assessment |
-| Prover (evidence + charts) | 3 | ~1,130 | Complete -- CSV evidence + Vega-Lite SVG charts (6 types) |
-| Narrator + Enhancer + Dashboard | 3 | ~580 | Complete -- case.md + dashboard.html + AI per-hypothesis enrichment |
+| Investigator (Opus 4.6) | 2 | ~510 | Complete -- 8 tools (incl. `log_reasoning`, `create_finding`), reasoning steps, agent findings |
+| Hypothesis Maker + Five C's | 3 | ~370 | Complete -- templates + Five C's per-indicator structure + AI executive assessment |
+| Prover (evidence + charts) | 3 | ~1,130 | Complete -- CSV evidence + Vega-Lite SVG charts (entity-scoped filtering pending K1) |
+| Narrator + Enhancer + Dashboard + Briefing + Narrative | 6 | ~900 | Complete -- case.md + dashboard.html + README.md briefing + investigation-narrative.md |
 | Verifier | 1 | ~120 | Complete -- claim-evidence cross-check + tautology detection |
-| Orchestrator | 1 | ~340 | Complete -- 8-step pipeline with QueryContext propagation |
-| Shared utilities | 4 | ~240 | Complete -- logger, fs, provenance, types (incl. QueryContext) |
-| **Total** | **41+ files** | **~5,960 lines** | **All agents fully operational** |
+| Orchestrator | 1 | ~420 | Complete -- 8-step pipeline + consolidation + briefing + narrative + data dir |
+| Shared utilities | 4 | ~290 | Complete -- logger, fs (query-param naming), provenance (file hashes), types (MaterialFinding, InvestigationStep, etc.) |
+| **Total** | **46 files** | **~6,790 lines** | **All agents fully operational** |
 
-**No stubs remaining.** All agents are fully operational including the Opus 4.6 investigative agent.
+**No stubs remaining.** All agents fully operational. Phase K will address evidence scoping and output size reduction.
 
 ### Test Suite
 
 | Test File | Tests | What It Covers |
 |-----------|-------|----------------|
-| `config.test.ts` | 3 | Config loading, defaults, threshold merging |
+| `config.test.ts` | 3 | Config loading, defaults, threshold merging (incl. materiality config) |
 | `indicators.test.ts` | 12 | R001-R004, R006 indicators + R004 tautology suppression + R006 peer group caveat |
 | `engine.test.ts` | 3 | Engine initialization, indicator filtering, severity sorting |
 | `hypothesis.test.ts` | 4 | Template generation, non-accusatory language, deduplication |
@@ -49,19 +51,26 @@
 | `prover.test.ts` | 5 | Evidence artifact generation, CSV validity, escaping, master summary, executive skip |
 | `charts.test.ts` | 12 | Vega-Lite spec builders (6 chart types), SVG rendering, adaptive log-scale binning |
 | `enrichment.test.ts` | 16 | SAM.gov, OpenSanctions, sub-awards clients with mocked HTTP |
-| `investigator.test.ts` | 15 | Tool definitions, agent loop, max iteration cap, findings structure |
-| **Total** | **80** | **All passing** |
+| `investigator.test.ts` | 15 | 8 tool definitions, agent loop, max iteration cap, findings structure |
+| `consolidator.test.ts` | 8 | Signal grouping, materiality scoring, maxFindings cap, severity escalation, source tags |
+| `five-cs.test.ts` | 6 | All 6 indicator templates, non-accusatory language, unknown indicator fallback |
+| `briefing.test.ts` | 6 | README.md structure, findings display, next steps, disclaimer, AI tags |
+| **Total** | **100** | **All passing** |
 
 ### Validated on Real Data
 
 **Demo slice:** Department of Defense → MIT, FY2023 (full DoD dataset: 10,000 awards)
 - 10,000 awards fetched via paginated search, 9,994+ details enriched from cache
 - **1,356 signals detected** across 6 indicators on the full DoD dataset
+- **→ 20 material findings** via consolidation (68x reduction from raw signals)
 - **613 hypotheses generated**, 874 CSV evidence artifacts, 4 SVG charts
-- **2,716/2,716 claims verified** (verification passed, 0 unsupported)
+- **2,716/2,716 claims verified** (verification passed, 0 unsupported -- no regression after G-J)
 - R004 tautological signal for MIT correctly suppressed (was 100% before QueryContext fix)
 - Award distribution chart auto-switches to log scale (data spans $7.9K to $1.59B)
 - "Data Scope & Interpretation" section explains cumulative values and filter implications
+- README.md briefing shows top 5 findings with Five C's structure and dollar exposure
+- Dashboard halved from 19 MB → 10 MB (awards array stripped from inline data)
+- Case folder named `dod-mit-2026-02-11` (query-param naming)
 
 **Data audit findings (DoD-MIT slice):**
 - 66.7% of the 54 MIT awards have `startDate` outside the 2023 query range (2013-2022 contracts with 2023 activity)
@@ -99,38 +108,49 @@ a795bb9 Add knowledge base documents and reference repositories
 
 ## Architecture
 
-### Current: 8-Step Pipeline (implemented)
+### Current: 8-Step Pipeline + Consolidation (implemented)
 
 ```
-investigate run [--agency=<name>] [--recipient=<name>] --period=<start:end> [--deep] [--charts] [--no-ai]
+investigate run [--agency=<name>] [--recipient=<name>] --period=<start:end> [--deep] [--charts] [--no-ai] [--full-evidence]
 
-  Step 1: COLLECT       USAspending API → paginate → cache → normalize
-                        → Construct QueryContext from params (recipient/agency/period filters)
-  Step 2: SIGNAL        6 indicators × fold/finalize → signal table (QueryContext-aware)
-  Step 3: INVESTIGATE   Opus 4.6 agent examines signals, fetches enrichment, iterates (--deep)
-  Step 4: HYPOTHESIZE   templates + agent findings merge → enriched questions
-  Step 5: PROVE         CSV tables + SVG charts (adaptive binning) → evidence/ directory
-  Step 6: ENHANCE       AI-refined per-hypothesis narrative (Claude Sonnet)
-  Step 7: REPORT        case.md (with Data Scope section) + dashboard.html
-  Step 8: VERIFY        cross-check claims + tautology detection → pass/fail
+  Step 1:   COLLECT       USAspending API → paginate → cache → normalize
+                          → Construct QueryContext from params (recipient/agency/period filters)
+  Step 2:   SIGNAL        6 indicators × fold/finalize → signal table (QueryContext-aware)
+  Step 2.5: CONSOLIDATE   Group signals → dollar-weighted materiality → top-N MaterialFindings (Five C's)
+  Step 3:   INVESTIGATE   Opus 4.6 agent (8 tools incl. log_reasoning, create_finding) (--deep)
+                          → Agent findings merged into MaterialFindings
+  Step 4:   HYPOTHESIZE   templates + agent findings merge → enriched questions
+  Step 5:   PROVE         CSV tables + SVG charts (adaptive binning) → evidence/ directory
+  Step 6:   ENHANCE       AI-refined per-hypothesis narrative (Claude Sonnet)
+  Step 7:   REPORT        README.md + case.md + dashboard.html + investigation-narrative.md
+  Step 8:   VERIFY        cross-check claims + tautology detection → pass/fail
 ```
 
-The architectural shift (current → target):
+The architectural shift achieved (Phases G-J):
 
 ```
-Current:  Collect → Rules → 1,356 flat signals → 613 template hypotheses → 820KB report
+Before:   Collect → Rules → 1,356 flat signals → 613 template hypotheses → 820KB report (550MB folder)
 
-Target:   Collect → Rules → AGENT TRIAGE → Top-N Material Findings → Concise Briefing
-                               |
-                    +-----------------------------------+
-                    |  1. Triages signals by materiality |
-                    |  2. log_reasoning: records thinking | <-- visible reasoning trace
-                    |  3. search_usaspending: baselines   | <-- comparative data
-                    |  4. SAM.gov / OpenSanctions          |
-                    |  5. Forms/revises theories            |
-                    |  6. Produces Five C's findings        |
-                    |  7. Writes investigation narrative    |
-                    +-----------------------------------+
+After:    Collect → Rules → CONSOLIDATE → 20 Material Findings (Five C's) → README.md + case.md + dashboard
+                     |           |
+                     |    +------------------+
+                     |    | Group by entity   |
+                     |    | Dollar-weighted   |
+                     |    | Top-N ranked      |
+                     |    | Five C's per GAO  |
+                     |    +------------------+
+                     |
+              (--deep mode)
+                     |
+              +-----------------------------------+
+              |  1. log_reasoning: records thinking | <-- visible reasoning trace
+              |  2. SAM.gov / OpenSanctions         |
+              |  3. fetch_comparable_awards          |
+              |  4. create_finding: Five C's         | <-- agent creates findings
+              |  5. Writes investigation narrative   |
+              +-----------------------------------+
+
+Remaining (Phase K): Entity-scoped evidence CSVs + dashboard <1MB → folder <10MB
 ```
 
 ### Source Layout (actual)
@@ -158,6 +178,7 @@ src/
 │
 ├── signaler/                     # Signaler Agent
 │   ├── engine.ts                 # Orchestrates all indicators, sorts by severity
+│   ├── consolidator.ts           # Signal → MaterialFinding consolidation (Phase G1)
 │   ├── types.ts                  # Indicator interface, SignalEngineResult
 │   └── indicators/
 │       ├── base.ts               # BaseIndicator abstract (fold/finalize pattern)
@@ -170,7 +191,8 @@ src/
 │
 ├── hypothesis/                   # Hypothesis Maker Agent
 │   ├── generator.ts              # Template + Claude AI executive assessment
-│   └── templates.ts              # 6 indicator-specific non-accusatory templates
+│   ├── templates.ts              # 6 indicator-specific non-accusatory templates
+│   └── five-cs.ts                # GAO Yellow Book Five C's per-indicator templates (Phase G4)
 │
 ├── enrichment/                   # Multi-source enrichment clients
 │   ├── index.ts                  # Re-exports all clients
@@ -192,9 +214,11 @@ src/
 │   └── checker.ts                # Claim-evidence cross-check + tautology detection
 │
 ├── narrator/                     # Narrator Agent
-│   ├── report.ts                 # case.md assembly (Data Scope, signals, hypotheses, evidence)
+│   ├── report.ts                 # case.md assembly (material findings, Data Scope, signals, hypotheses)
+│   ├── briefing.ts               # README.md executive briefing generator (Phase G3)
+│   ├── narrative.ts              # investigation-narrative.md renderer (Phase H3)
 │   ├── enhancer.ts               # AI per-hypothesis narrative enrichment (Claude Sonnet)
-│   └── dashboard.ts              # Interactive HTML dashboard generator
+│   └── dashboard.ts              # Interactive HTML dashboard (signal pagination, lightweight data)
 │
 ├── orchestrator/                 # Pipeline orchestration
 │   └── pipeline.ts               # 8-step pipeline with QueryContext propagation
@@ -208,9 +232,9 @@ src/
 
 ### Case Folder Output
 
-**Current (problematic):** `cases/case-YYYY-MM-DD/` -- 550MB, 883 files, date-only name.
+**Current (post-G-J):** `cases/dod-mit-2026-02-11/` -- 543 MB, query-param naming, README.md entry point, material findings. Evidence still 518 MB (entity-scoped filtering pending Phase K1).
 
-**Target (Phase G):** Compact, browsable, git-committable.
+**Target (Phase K):** Compact, browsable, git-committable (<10 MB default).
 
 ```
 cases/dod-mit-2023_20260211T1629/       # Agency-recipient-period_timestamp
@@ -243,7 +267,9 @@ cases/dod-mit-2023_20260211T1629/       # Agency-recipient-period_timestamp
 └── evidence-manifest.json
 ```
 
-**Key changes from current:** Folder named by query params. README.md as primary output. Entity-scoped evidence. <10MB default (detail/ only with `--full-evidence`). Agent reasoning as dedicated artifact.
+**What's done (G-J):** Folder named by query params. README.md as primary output. `data/` subdirectory for JSON. `evidence/summary/`, `evidence/detail/`, `evidence/charts/` subdirectories created. Agent reasoning as dedicated artifact (`investigation-narrative.md`).
+
+**What's pending (Phase K):** Entity-scoped evidence CSVs (K1). Dashboard external data loading (K2). `--full-evidence` gating of large files (K6). Target: <10MB default.
 
 ---
 
@@ -917,7 +943,7 @@ signals:
 
 ## Enhancement Roadmap
 
-### Completed (Phases 0-F + QueryContext)
+### Completed (Phases 0-F + QueryContext + G-J)
 
 | Phase | Enhancement | Status |
 |-------|-------------|--------|
@@ -931,17 +957,46 @@ signals:
 | E | Pipeline integration + CLI flags (`--deep`, `--charts`, `--no-ai`) | Done |
 | F | Tests (enrichment, investigator, charts) -- 80 total | Done |
 | -- | QueryContext propagation (5 data interpretation fixes) | Done |
+| G1 | Signal consolidation & materiality filtering (`consolidator.ts`) | Done |
+| G3 | Executive briefing (`briefing.ts` → `README.md`) | Done |
+| G4 | Five C's finding structure (`five-cs.ts`) | Done |
+| G5 | Case folder redesign (query-param naming, `data/`, split `evidence/`) | Done |
+| H1 | `log_reasoning` tool (agent externalizes thinking) | Done |
+| H3 | Investigation narrative rendering (`narrative.ts`) | Done |
+| H4 | `create_finding` tool (agent creates Five C's findings) | Done |
+| I1-I4 | Traceability (file hashes, conversation log, tool IDs) | Done (partial) |
+| J1 | Dashboard awards stripped, signal pagination | Done (partial) |
+| J2 | case.md inverted pyramid (material findings first, collapsible signals) | Done |
+| J3 | Next Steps section in README.md | Done |
+| J4 | AI tags (`[RULE]`, `[AI-ENHANCED]`, `[AI-DISCOVERED]`) | Done |
 
-### Next: Phases G-J (Output Quality Revolution)
+### Phases G-J: Impact Assessment (2026-02-11)
 
-See "Next Implementation: Phases G-J" section above for detailed specifications.
+Comparative run with identical parameters: DoD → MIT, FY2023, `--charts --no-ai`.
 
-| Phase | What | Priority | Est. Effort |
-|-------|------|----------|-------------|
-| **G** | Output quality revolution (consolidation, evidence, briefing, Five C's, folder) | **Critical** | 10-12h |
-| **H** | Visible agent reasoning (`log_reasoning`, `search_usaspending`, narrative) | **Critical** | 6-8h |
-| **I** | Traceability & reproducibility (conversation log, provenance chain) | Medium | 2-3h |
-| **J** | Dashboard & report polish (lightweight, concise, next steps, AI tags) | Medium | 3-4h |
+| Metric | Before (pre-G-J) | After (post-G-J) | Change | Target | Hit? |
+|--------|-------------------|-------------------|--------|--------|------|
+| **Folder name** | `case-2026-02-11` | `dod-mit-2026-02-11` | Descriptive | Query-param naming | Yes |
+| **README.md** | None | 8 KB (1-page briefing) | New entry point | Exists, <200 lines | Yes |
+| **Material findings** | None (1,356 flat signals) | **20 ranked findings** | **68x reduction** | 10-20 findings | Yes |
+| **Five C's structure** | None | All 20 findings have Condition/Criteria/Cause/Effect/Rec | Audit-grade | All findings structured | Yes |
+| **case.md** | 824 KB | 844 KB (+findings section) | +2.4% | <50 KB | **No** |
+| **dashboard.html** | **19 MB** | **10 MB** | **-47%** | <1 MB | **No** |
+| **evidence/** | 518 MB / 883 files | 518 MB / 881 files | Unchanged | <10 MB default | **No** |
+| **Total folder** | 550 MB | 543 MB | -1.3% | <10 MB | **No** |
+| **Verification** | 2,716/2,716 (100%) | 2,716/2,716 (100%) | No regression | 100% | Yes |
+| **File hashes** | Empty `{}` | 2 hashes populated | Improved | All output files | Partial |
+| **Agent tools** | 6 | 8 (+log_reasoning, +create_finding) | Ready for `--deep` | 8 tools | Yes |
+| **Tests** | 80 | 100 | +25% | All pass | Yes |
+| **AI tags** | None | `[RULE]` on all rule findings | Working | 3 tag types | Yes |
+
+**Verdict:** The intellectual framework is solid (consolidation, Five C's, briefing, narrative, tags). But the **file size targets were largely missed** because the two biggest offenders -- entity-scoped evidence filtering (G2) and dashboard external data loading -- were not completed. These are the highest priority for Phase K.
+
+### Next: Phase K (Output Size Revolution + Quality Fixes)
+
+Phase K addresses the unfinished size targets from G-J and the bugs discovered during the comparison run. **This is what transforms a 543 MB case folder into a <10 MB git-committable artifact.**
+
+See detailed specifications in the section below.
 
 ### Long-Term (post-hackathon)
 
@@ -950,6 +1005,7 @@ See "Next Implementation: Phases G-J" section above for detailed specifications.
 | Period-specific obligation amounts | Use transaction sums instead of cumulative `awardAmount` |
 | Cross-agency R004 suppression | Suppress when `--agency` yields single agency |
 | Market-wide R006 peer groups | Fetch NAICS peers beyond filtered dataset |
+| H2: `search_usaspending` tool | Agent makes real API queries for baselines (not just in-memory) |
 | OCDS data format support | International procurement datasets |
 | Beneficial ownership (BODS) | Link suppliers to ultimate owners |
 | Network analysis | Entity relationship graphs |
@@ -958,31 +1014,215 @@ See "Next Implementation: Phases G-J" section above for detailed specifications.
 
 ---
 
+## Phase K: Output Size Revolution + Quality Fixes
+
+### K1: Entity-Scoped Evidence Filtering (CRITICAL -- biggest size win)
+
+**Problem:** Evidence CSVs are global 10K-row dumps (518 MB, 881 files). Every hypothesis links to the same unfiltered dataset. This is the #1 file size offender and the most misleading aspect of the current output.
+
+**Root cause:** `ProverInput` now has a `findings?: MaterialFinding[]` field (added in G-J), but the `produceR00XEvidence()` functions in `src/prover/analyzer.ts` do not yet consume it. They still iterate all `awards` and `hypotheses` unfiltered.
+
+**Required changes in `src/prover/analyzer.ts`:**
+
+1. When `input.findings` is present, produce evidence per-finding instead of per-hypothesis:
+   - Each `MaterialFinding` has `affectedAwardIds: string[]` -- use this to filter the award dataset
+   - R001: filter `competedAwards` to only the finding's affected awards
+   - R002: filter `competitionBreakdown` and `nonCompeted` to finding's awards
+   - R003: filter `nearThreshold` to finding's awards
+   - R004: still use all awards (vendor share needs full context) but highlight the finding's entity
+   - R005: filter `modifiedAwards` to finding's awards
+   - R006: filter `byNaics` groups to only include the finding's award and its immediate peers
+
+2. Write summary evidence to `caseFolder.summaryEvidenceDir` (top findings only)
+3. Write full detail to `caseFolder.detailEvidenceDir` only when `--full-evidence` is set
+4. Skip the master `awards-summary.csv` in default mode (move to `--full-evidence`)
+
+**Expected result:** ~20 findings × ~5-50 rows each = ~200-1,000 total CSV rows instead of 881 files × 10K rows. Evidence directory shrinks from 518 MB to <5 MB.
+
+**Test:** Add assertion in `tests/unit/prover.test.ts`: when `findings` are provided, evidence CSV row counts match entity award counts, not global dataset.
+
+**Files:**
+- `src/prover/analyzer.ts` -- major refactor of `produceEvidence()` and all `produceR00XEvidence()` functions
+- `src/orchestrator/pipeline.ts` -- pass `caseFolder.summaryEvidenceDir` vs `detailEvidenceDir` based on `--full-evidence`
+- `tests/unit/prover.test.ts` -- new entity-scoped evidence tests
+
+### K2: Dashboard External Data Loading (CRITICAL -- 10 MB → <1 MB)
+
+**Problem:** Dashboard is 10 MB because it inlines all signal/hypothesis/evidence data as JSON in a `<script>` tag. Stripping the awards array (J1) halved it from 19 MB, but the remaining inline data (1,356 signals with full context strings, 613 hypotheses with full text, 874 evidence manifests) is still ~10 MB.
+
+**Root cause:** The dashboard was designed as a self-contained single file. This was fine at 100 signals but breaks at 1,000+.
+
+**Required changes in `src/narrator/dashboard.ts`:**
+
+1. Move `__DASHBOARD_DATA__` to an external `dashboard-data.json` file in the case folder
+2. Dashboard HTML loads it with `fetch('dashboard-data.json')` on page open
+3. Inline only the summary stats needed for initial render (signal count, severity breakdown, top-10 signals, hypothesis count)
+4. Lazy-load remaining signals and hypotheses on scroll/click
+5. The HTML template itself (CSS + JS + structure) should be <200 KB
+
+**Alternative (simpler, may be sufficient):** Keep inline but truncate:
+- Signals: inline only top 50 by severity, add "Load all N signals" button that fetches from `data/signals.json`
+- Hypotheses: inline only those matching material findings, not all 613
+- Evidence manifest: inline only IDs and titles, not full metadata
+
+**Expected result:** dashboard.html <1 MB (ideally <500 KB).
+
+**Files:**
+- `src/narrator/dashboard.ts` -- restructure data embedding
+- `src/orchestrator/pipeline.ts` -- write `dashboard-data.json` alongside `dashboard.html`
+
+### K3: Consolidator Finding Diversity (HIGH -- fixes R006 dominance)
+
+**Problem:** 19 of 20 material findings are R006 price outliers. The R002 non-competitive signals (281 of them) don't appear in the top 20 because individual mega-dollar R006 outliers ($1.6B, $735M, etc.) dominate the materiality score.
+
+**Root cause:** The materiality formula `totalDollarValue × severityWeight × signalCount` rewards single enormous awards over patterns across many smaller awards. A $1.6B single outlier scores higher than 50 non-competitive awards totaling $200M.
+
+**Required changes in `src/signaler/consolidator.ts`:**
+
+1. **Cap per-indicator findings:** Add `maxPerIndicator: number` to `MaterialityConfig` (default: 5). After sorting by materiality, enforce a per-indicator cap so no single indicator monopolizes the results.
+2. **Adjust the formula for R006:** For R006 (individual-award signals), use a diminishing returns multiplier: the 2nd R006 finding scores at 70% of its raw score, 3rd at 50%, etc. This naturally diversifies.
+3. **Group R002 by entity, not per-signal:** R002 currently produces many signals per entity (one per non-competitive code). The consolidator already groups by `(entityName, indicatorId)`, but R002's 281 signals across ~50 entities still produce 50 findings competing against 1,068 R006 signals from ~800 entities. Ensure R002 entity groups get aggregate dollar values from all their affected awards.
+
+**Expected result:** Top 20 findings include a mix: ~5 R006, ~5 R002, ~3 R003, with remaining slots for other indicators that fire.
+
+**Config change in `config/default.yaml`:**
+```yaml
+materiality:
+  minAwardCount: 1
+  minTotalAmount: 0
+  maxFindings: 20
+  maxPerIndicator: 5     # NEW: prevent single indicator from dominating
+```
+
+**Files:**
+- `src/signaler/consolidator.ts` -- add per-indicator cap + diminishing returns
+- `src/cli/config.ts` -- add `maxPerIndicator` to `MaterialityConfig` and schema
+- `config/default.yaml` -- add `maxPerIndicator: 5`
+- `tests/unit/consolidator.test.ts` -- test per-indicator diversity
+
+### K4: R003 Threshold Display Bug (MEDIUM -- fixes wrong $ value)
+
+**Problem:** The R003 finding says "within 10% below the $3 threshold." The Five C's template uses `signal.threshold` which contains `3` (the `minClusterSize` config value), not the dollar threshold ($250,000 or $7,500,000).
+
+**Root cause:** The `Signal.threshold` field for R003 carries the `minClusterSize` rather than the dollar threshold. The Five C's template in `src/hypothesis/five-cs.ts` assumes `signal.threshold` is a dollar value.
+
+**Fix options:**
+
+Option A (quick): In the R003 Five C's template, don't use `signal.threshold` for the dollar value. Instead, parse the dollar threshold from `signal.context` string, which already contains it (e.g., "7 awards near the $250,000 threshold").
+
+Option B (proper): Fix the R003 indicator (`src/signaler/indicators/splitting.ts`) to set `signal.threshold` to the dollar threshold value, and use a different field or context for the cluster size. This requires checking what other code reads `signal.threshold` for R003.
+
+**Recommended:** Option B -- fix at the source. The `threshold` field semantically should be the dollar threshold for R003. The `minClusterSize` is config metadata, not a threshold that signals exceed.
+
+**Files:**
+- `src/signaler/indicators/splitting.ts` -- set `threshold` to dollar value
+- `src/hypothesis/five-cs.ts` -- verify template reads correctly after fix
+- `tests/unit/indicators.test.ts` -- verify R003 signal threshold is dollar value
+- `tests/unit/five-cs.test.ts` -- verify R003 Five C's shows correct dollar threshold
+
+### K5: case.md Size Reduction (MEDIUM -- 844 KB → <50 KB)
+
+**Problem:** case.md is 844 KB. The material findings section added ~20 KB of value, but the remaining 824 KB is unchanged: 1,356-row signal table + 613 hypothesis sections with full template text.
+
+**Required changes in `src/narrator/report.ts`:**
+
+1. **Signal table:** Already wrapped in `<details>` for >50 signals (done in J2). But the signals are still all rendered as Markdown table rows inside the details tag. For >100 signals, replace with: "1,356 signals detected. See `data/signals.json` for full list. Top 20 by severity shown below:" then show only top 20.
+
+2. **Hypothesis section:** Currently renders all 613 hypotheses. When `materialFindings` is present, render only hypotheses that correspond to material findings (match by `indicatorId` + `entityName`). Add a note: "613 hypotheses generated. Showing the 20 corresponding to material findings. Full list in `data/hypotheses.json`."
+
+3. **Evidence links:** Currently every hypothesis lists its evidence files. Most are duplicates pointing to the same global CSVs. After K1 (entity-scoped evidence), this becomes correct automatically -- each finding links to its own scoped CSV.
+
+**Expected result:** case.md drops from 844 KB to ~30-50 KB.
+
+**Files:**
+- `src/narrator/report.ts` -- truncate signals, filter hypotheses to material findings
+
+### K6: JSON Data Deduplication (LOW -- cleanup)
+
+**Problem:** The pipeline currently writes JSON files to both `data/` and the root folder for backwards compatibility:
+- `signals.json` exists at both `cases/dod-mit-.../signals.json` and `cases/dod-mit-.../data/signals.json`
+- Same for `hypotheses.json`, `verification.json`
+- `awards.json` is in `data/` only (11 MB) but should also be gated by `--full-evidence`
+
+**Required changes in `src/orchestrator/pipeline.ts`:**
+1. Remove root-level duplicate JSON files (`signals.json`, `hypotheses.json`, `verification.json` at folder root)
+2. Gate `awards.json` behind `--full-evidence` (it's 11 MB of raw data)
+3. Always write `findings.json` and `provenance.json` (small, essential)
+
+**Expected result:** Data directory becomes the single source for JSON artifacts. Root folder contains only: `README.md`, `case.md`, `dashboard.html`, `provenance.json`, and subdirectories.
+
+**Files:**
+- `src/orchestrator/pipeline.ts` -- remove duplicate writes, gate large files
+
+### K7: USAspending Award Links in Reports (LOW -- traceability)
+
+**Problem:** Award IDs in reports and evidence CSVs are plain text. They should be clickable links to USAspending.
+
+**Required changes:**
+1. In `src/narrator/report.ts`: for any award ID in the material findings section, render as `[{awardId}](https://www.usaspending.gov/award/{internalId})`
+2. In `src/prover/analyzer.ts`: add a "USAspending Link" column to evidence CSVs with the URL
+3. Need to maintain a mapping of `awardId` → `internalId` since the USAspending URL uses the internal ID
+
+**Files:**
+- `src/narrator/report.ts` -- award ID links in findings section
+- `src/prover/analyzer.ts` -- URL column in CSVs
+
+---
+
+### Phase K Implementation Order
+
+| Step | Item | Priority | Est. Effort | Impact |
+|------|------|----------|-------------|--------|
+| 1 | **K1: Entity-scoped evidence** | **Critical** | 3-4h | 518 MB → <5 MB evidence |
+| 2 | **K2: Dashboard external data** | **Critical** | 2-3h | 10 MB → <1 MB dashboard |
+| 3 | **K3: Finding diversity** | **High** | 1-2h | 19 R006 → mixed indicators |
+| 4 | **K4: R003 threshold bug** | **High** | 30min | Correct dollar values |
+| 5 | **K5: case.md truncation** | **Medium** | 1-2h | 844 KB → <50 KB report |
+| 6 | **K6: JSON dedup** | **Low** | 30min | Cleaner folder structure |
+| 7 | **K7: Award links** | **Low** | 1h | Better traceability |
+
+**K1 + K2 are the critical path** -- they deliver the promised <10 MB case folder. K3 + K4 fix the most visible quality issues. K5-K7 are polish.
+
+**Total estimated effort:** 9-13h for the full phase.
+
+---
+
 ## Session Resumption Protocol
 
 To resume development:
 
-1. **Read this document** -- contains full implementation state, output quality audit, and Phases G-J plan
+1. **Read this document** -- contains full implementation state, G-J results, and Phase K plan
 2. **Check git log** -- `git log --oneline` shows what's committed
-3. **Run tests** -- `npm test` (80 tests, all should pass)
+3. **Run tests** -- `npm test` (100 tests, all should pass)
 4. **Run typecheck** -- `npm run typecheck` (should be clean)
 5. **Check cache** -- `.cache/` preserves API data; re-runs are instant with `--no-ai`
-6. **Review the output quality issues** -- "Output Quality Audit" section documents what's wrong with current output
-7. **Start with Phase G1** (signal consolidation) -- this unblocks most other phases
+6. **Review the Phase K plan above** -- K1 (entity-scoped evidence) is the critical first step
+7. **Compare output folders:**
+   - `cases/case-2026-02-11/` -- pre-G-J baseline (550 MB, no findings, no README)
+   - `cases/dod-mit-2026-02-11/` -- post-G-J run (543 MB, 20 findings, README.md)
 
-### Key files for context
+### Key files for Phase K
+
+| File | What to do |
+|------|------------|
+| `src/prover/analyzer.ts` | **K1:** Refactor `produceR00XEvidence()` to filter by `findings.affectedAwardIds` |
+| `src/narrator/dashboard.ts` | **K2:** Move data to external JSON or truncate inline to top-50 |
+| `src/signaler/consolidator.ts` | **K3:** Add `maxPerIndicator` cap + diminishing returns for R006 |
+| `src/signaler/indicators/splitting.ts` | **K4:** Fix `threshold` field to carry dollar value, not cluster size |
+| `src/hypothesis/five-cs.ts` | **K4:** Verify R003 template after threshold fix |
+| `src/narrator/report.ts` | **K5:** Truncate signal table, filter hypotheses to material findings only |
+| `src/orchestrator/pipeline.ts` | **K1/K2/K6:** Route evidence to summary vs detail dirs, remove JSON dupes |
+| `src/cli/config.ts` | **K3:** Add `maxPerIndicator` to MaterialityConfig |
+| `config/default.yaml` | **K3:** Add `maxPerIndicator: 5` |
+
+### New files added in Phases G-J
 
 | File | Purpose |
 |------|---------|
-| `docs/PROJECT_PLAN.md` | This document -- full state, audit findings, and Phases G-J specs |
-| `docs/PROJECT_BRIEF.md` | Hackathon-ready project description |
-| `docs/api-analysis.md` | USAspending field-to-indicator mapping |
-| `config/default.yaml` | All configurable thresholds |
-| `src/shared/types.ts` | Core types: Signal, QueryContext, InvestigationFindings, etc. |
-| `src/signaler/engine.ts` | Signal engine with QueryContext propagation |
-| `src/investigator/agent.ts` | Opus 4.6 investigative agent (target for Phase H) |
-| `src/investigator/tools.ts` | Agent tool definitions (add `log_reasoning` + `search_usaspending` here) |
-| `src/prover/analyzer.ts` | Evidence generation (fix entity scoping in Phase G2) |
-| `src/narrator/report.ts` | Report assembly (simplify in Phase J2) |
-| `src/orchestrator/pipeline.ts` | 8-step pipeline (add consolidation step in Phase G1) |
-| `cases/case-2026-02-11/` | Current output to reference -- the 820KB/550MB problem |
+| `src/signaler/consolidator.ts` | Signal → MaterialFinding consolidation with materiality scoring |
+| `src/hypothesis/five-cs.ts` | GAO Yellow Book Five C's templates per indicator |
+| `src/narrator/briefing.ts` | README.md executive briefing generator |
+| `src/narrator/narrative.ts` | Investigation narrative renderer (for `--deep` mode) |
+| `tests/unit/consolidator.test.ts` | 8 tests for consolidation logic |
+| `tests/unit/five-cs.test.ts` | 6 tests for Five C's templates |
+| `tests/unit/briefing.test.ts` | 6 tests for briefing generation |
