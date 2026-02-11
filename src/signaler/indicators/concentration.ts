@@ -79,6 +79,15 @@ export class ConcentrationIndicator extends BaseIndicator {
         const share = recipientSpend.amount / agencySpend.totalAmount;
 
         if (share >= this.vendorShareThreshold) {
+          // Suppress tautological signal when filtering by this exact recipient
+          if (
+            this.queryContext?.isRecipientFiltered &&
+            this.queryContext.recipientFilter &&
+            recipient.toUpperCase().includes(this.queryContext.recipientFilter.toUpperCase())
+          ) {
+            continue;
+          }
+
           signals.push({
             indicatorId: this.id,
             indicatorName: this.name,

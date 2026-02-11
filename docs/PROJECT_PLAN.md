@@ -1,7 +1,7 @@
 # Procurement Investigator - Project Plan
 
 > **Last updated:** 2026-02-11
-> **Current stage:** Enhanced MVP complete. Next: Opus 4.6 autonomous investigative agent.
+> **Current stage:** Enhanced MVP + QueryContext fix. Phases A-F (investigator, charts, dashboard) complete. Next: output quality hardening.
 
 ## Executive Summary
 
@@ -19,44 +19,54 @@
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| CLI (commander) | 5 | ~420 | Complete -- 3 commands: `run`, `fetch`, `signal`; `--with-transactions` flag |
+| CLI (commander) | 5 | ~420 | Complete -- 3 commands: `run`, `fetch`, `signal`; `--with-transactions`, `--deep`, `--charts` flags |
 | Collector (API client) | 4 | ~679 | Complete -- pagination, throttling, caching, detail + transaction enrichment |
 | Normalizer | 3 | ~167 | Complete -- search results, award details, transactions |
-| Signaler (6 indicators) | 9 | ~1,039 | Complete -- all 6 indicators with configurable thresholds |
+| Signaler (6 indicators) | 9 | ~1,070 | Complete -- all 6 indicators with configurable thresholds + QueryContext awareness |
+| Enrichment clients | 4 | ~600 | Complete -- SAM.gov, OpenSanctions, sub-awards clients |
+| Investigator (Opus 4.6) | 2 | ~400 | Complete -- autonomous tool-calling agent with enrichment |
 | Hypothesis Maker | 2 | ~214 | Complete -- templates + Claude AI executive assessment |
-| Prover (evidence tables) | 1 | ~612 | Complete -- CSV evidence per hypothesis (R001-R006) + master summary |
-| Narrator + Enhancer | 2 | ~280 | Complete -- case.md with evidence links + AI per-hypothesis enrichment |
-| Verifier | 1 | ~103 | Complete -- 10-point claim-evidence cross-check |
-| Orchestrator | 1 | ~150 | Complete -- 7-step pipeline with prover + AI narrator |
-| Shared utilities | 4 | ~224 | Complete -- logger, fs, provenance, types |
-| **Total** | **33 files** | **~3,900 lines** | **33/33 fully implemented (100%)** |
+| Prover (evidence + charts) | 3 | ~1,130 | Complete -- CSV evidence + Vega-Lite SVG charts (6 types) |
+| Narrator + Enhancer + Dashboard | 3 | ~580 | Complete -- case.md + dashboard.html + AI per-hypothesis enrichment |
+| Verifier | 1 | ~120 | Complete -- claim-evidence cross-check + tautology detection |
+| Orchestrator | 1 | ~340 | Complete -- 8-step pipeline with QueryContext propagation |
+| Shared utilities | 4 | ~240 | Complete -- logger, fs, provenance, types (incl. QueryContext) |
+| **Total** | **41+ files** | **~5,960 lines** | **All agents fully operational** |
 
-**No stubs remaining.** All agents are fully operational.
+**No stubs remaining.** All agents are fully operational including the Opus 4.6 investigative agent.
 
 ### Test Suite
 
 | Test File | Tests | What It Covers |
 |-----------|-------|----------------|
 | `config.test.ts` | 3 | Config loading, defaults, threshold merging |
-| `indicators.test.ts` | 9 | R001 (single-bid), R002 (non-competitive), R003 (splitting), R004 (concentration), R006 (price outliers) |
+| `indicators.test.ts` | 12 | R001-R004, R006 indicators + R004 tautology suppression + R006 peer group caveat |
 | `engine.test.ts` | 3 | Engine initialization, indicator filtering, severity sorting |
 | `hypothesis.test.ts` | 4 | Template generation, non-accusatory language, deduplication |
-| `report.test.ts` | 7 | Disclaimer, signal table, hypotheses, provenance, methodology refs, evidence links |
+| `report.test.ts` | 10 | Disclaimer, signals, hypotheses, provenance, evidence links, Data Scope section, verifier tautology detection |
 | `prover.test.ts` | 5 | Evidence artifact generation, CSV validity, escaping, master summary, executive skip |
-| **Total** | **31** | **All passing** |
+| `charts.test.ts` | 12 | Vega-Lite spec builders (6 chart types), SVG rendering, adaptive log-scale binning |
+| `enrichment.test.ts` | 16 | SAM.gov, OpenSanctions, sub-awards clients with mocked HTTP |
+| `investigator.test.ts` | 15 | Tool definitions, agent loop, max iteration cap, findings structure |
+| **Total** | **80** | **All passing** |
 
 ### Validated on Real Data
 
-**Demo slice:** Department of Defense → MIT, FY2023
-- 54 awards fetched and cached from USAspending API
-- 54 award details enriched (competition data, offers received, pricing type)
-- **3 signals detected:**
-  - R004 **HIGH**: 100% vendor concentration ($11.4B across 54 awards)
-  - R002 **MEDIUM**: 79.6% non-competitive awards (43/54)
-  - R006 **MEDIUM**: 1 price outlier at 3.7x NAICS category mean
-- **4 hypotheses generated** (3 templates + 1 AI executive assessment)
-- **10/10 claims verified** (verification passed)
-- AI executive assessment correctly identified MIT Lincoln Lab as a likely UARC arrangement
+**Demo slice:** Department of Defense → MIT, FY2023 (full DoD dataset: 10,000 awards)
+- 10,000 awards fetched via paginated search, 9,994+ details enriched from cache
+- **1,356 signals detected** across 6 indicators on the full DoD dataset
+- **613 hypotheses generated**, 874 CSV evidence artifacts, 4 SVG charts
+- **2,716/2,716 claims verified** (verification passed, 0 unsupported)
+- R004 tautological signal for MIT correctly suppressed (was 100% before QueryContext fix)
+- Award distribution chart auto-switches to log scale (data spans $7.9K to $1.59B)
+- "Data Scope & Interpretation" section explains cumulative values and filter implications
+
+**Data audit findings (DoD-MIT slice):**
+- 66.7% of the 54 MIT awards have `startDate` outside the 2023 query range (2013-2022 contracts with 2023 activity)
+- Award amounts are cumulative contract values from inception, not period spending
+- Amount range spans 201,785x ($7.9K to $1.59B) -- requires log-scale binning
+- All 54 awards are MIT (expected: `--recipient` filter), so R004 concentration was structurally 100%
+- See "Data Interpretation Issues Found & Fixed" below for full analysis
 
 ### Git History
 
@@ -76,33 +86,20 @@ a795bb9 Add knowledge base documents and reference repositories
 
 ## Architecture
 
-### Current: 7-Step Pipeline
+### Current: 8-Step Pipeline (implemented)
 
 ```
-investigate run [--agency=<name>] [--recipient=<name>] --period=<start:end> [--with-transactions]
+investigate run [--agency=<name>] [--recipient=<name>] --period=<start:end> [--deep] [--charts] [--no-ai]
 
   Step 1: COLLECT       USAspending API → paginate → cache → normalize
-  Step 2: SIGNAL        6 indicators × fold/finalize → signal table
-  Step 3: HYPOTHESIZE   templates + Claude AI → non-accusatory questions
-  Step 4: PROVE         CSV evidence tables per hypothesis → evidence/ directory
-  Step 5: ENHANCE       AI-refined per-hypothesis narrative (Claude Sonnet)
-  Step 6: REPORT        case.md with disclaimer, signals, hypotheses, evidence links, methodology
-  Step 7: VERIFY        10-point claim-evidence cross-check → pass/fail
-```
-
-### Target: 8-Step Pipeline (with Opus 4.6 Investigative Agent)
-
-```
-investigate run [--agency=<name>] [--recipient=<name>] --period=<start:end> [--deep] [--charts]
-
-  Step 1: COLLECT       USAspending API → paginate → cache → normalize
-  Step 2: SIGNAL        6 indicators × fold/finalize → signal table
-  Step 3: INVESTIGATE   Opus 4.6 agent examines signals, fetches enrichment, iterates (NEW)
+                        → Construct QueryContext from params (recipient/agency/period filters)
+  Step 2: SIGNAL        6 indicators × fold/finalize → signal table (QueryContext-aware)
+  Step 3: INVESTIGATE   Opus 4.6 agent examines signals, fetches enrichment, iterates (--deep)
   Step 4: HYPOTHESIZE   templates + agent findings merge → enriched questions
-  Step 5: PROVE         CSV tables + SVG charts → evidence/ directory (UPDATED)
+  Step 5: PROVE         CSV tables + SVG charts (adaptive binning) → evidence/ directory
   Step 6: ENHANCE       AI-refined per-hypothesis narrative (Claude Sonnet)
-  Step 7: REPORT        case.md + dashboard.html (UPDATED)
-  Step 8: VERIFY        cross-check claims against evidence → pass/fail
+  Step 7: REPORT        case.md (with Data Scope section) + dashboard.html
+  Step 8: VERIFY        cross-check claims + tautology detection → pass/fail
 ```
 
 The architectural shift:
@@ -603,6 +600,45 @@ All configurable via `config/default.yaml`.
 
 ---
 
+## Data Interpretation Issues Found & Fixed
+
+Case output validation on the DoD-MIT slice revealed five systemic issues caused by downstream pipeline stages operating blind to the collector's query filters. All were fixed via **QueryContext propagation** -- a lightweight `QueryContext` type constructed once in the pipeline and threaded to every component that needs filter awareness.
+
+### Issues Discovered
+
+| # | Issue | Root Cause | Impact |
+|---|-------|-----------|--------|
+| 1 | **R004 tautological signal** | `--recipient=MIT` means 100% of filtered awards go to MIT by definition | R004 flagged MIT at 100% concentration -- structurally inevitable, not suspicious |
+| 2 | **Cumulative values misrepresented as period spending** | USAspending `awardAmount` is cumulative from contract inception | A $1.59B award from 2016 appeared as if it was 2023 spending |
+| 3 | **Awards outside query period** | `time_period` filter selects awards with *activity* during the period, not awards starting in it | 66.7% of MIT awards had `startDate` before 2023 (2013-2022 contracts with 2023 modifications) |
+| 4 | **Fixed chart bins on skewed data** | Linear histogram bins with 201,785x data range ($7.9K to $1.59B) | All awards in a single bin; chart useless |
+| 5 | **R006 peer group limited to filtered cohort** | IQR computed on recipient-filtered dataset only | Small peer groups (n<20) don't represent the full NAICS market |
+
+### Fixes Applied (QueryContext Propagation)
+
+| Fix | File(s) | What Changed |
+|-----|---------|-------------|
+| `QueryContext` type | `src/shared/types.ts` | New interface: `recipientFilter`, `agencyFilter`, `periodStart/End`, `isRecipientFiltered`, `isAgencyFiltered` |
+| Indicator interface | `src/signaler/types.ts`, `indicators/base.ts` | Optional `setQueryContext()` method on `Indicator`, default impl in `BaseIndicator` |
+| Engine threading | `src/signaler/engine.ts` | `initialize(config, filter?, queryContext?)` forwards context to each indicator |
+| R004 suppression | `src/signaler/indicators/concentration.ts` | `finalize()` skips signals where entity matches the active recipient filter |
+| R006 peer caveat | `src/signaler/indicators/price-outliers.ts` | Appends "peer group limited to filtered dataset" when recipient-filtered and n<20 |
+| Adaptive binning | `src/prover/charts.ts` | `buildAwardDistributionSpec()` switches to log₁₀ scale when data range >100x |
+| Data Scope section | `src/narrator/report.ts` | New "Data Scope & Interpretation" section between Data Overview and Signals |
+| Tautology detection | `src/verifier/checker.ts` | Safety-net check: flags R004 signals matching recipient filter as "unsupported" |
+| Pipeline wiring | `src/orchestrator/pipeline.ts` | Constructs `QueryContext` from params, passes to engine, report, and verifier |
+
+### Remaining Data Interpretation Concerns (future work)
+
+These issues are now **documented in the report output** but not yet structurally resolved:
+
+1. **Cumulative vs. period obligation amounts** -- The report now explains that amounts are cumulative, but a future enhancement could use transaction data to compute period-specific obligations instead.
+2. **Awards with start dates outside the query range** -- Documented in the Data Scope section. Could add a "period_obligation" field by summing transactions within the date range.
+3. **Cross-agency R004 when `--agency` is used** -- Concentration is computed per agency already, but with `--agency` filter, there's only one agency in the dataset. Not yet suppressed (less obvious tautology than recipient filtering).
+4. **R006 IQR on filtered data** -- The caveat is now shown, but a future enhancement could fetch market-wide peer data for the same NAICS codes to compute a true market IQR.
+
+---
+
 ## Key Decisions & Rationale
 
 ### Architecture Decisions
@@ -625,6 +661,8 @@ All configurable via `config/default.yaml`.
 
 9. **Agent tool-calling over prompt-stuffing** -- The Opus investigative agent uses structured tool definitions (`Tool` type from Anthropic SDK) rather than asking the model to generate API calls as text. This gives typed inputs/outputs and reliable execution.
 
+10. **QueryContext propagation over per-component filter logic** -- Rather than have each component independently parse CLI params to determine filter state, we construct a `QueryContext` once in the pipeline and thread it as an optional parameter. This is additive (existing tests pass unchanged) and gives every component a single source of truth about what filters are active.
+
 ### Data Decisions
 
 1. **DoD → MIT as demo slice** -- ~54 awards in 2023, manageable volume, all from Air Force (Lincoln Lab), low reputational risk for demo purposes.
@@ -633,7 +671,11 @@ All configurable via `config/default.yaml`.
 
 3. **Recipient deduplication not yet implemented** -- Same company can appear under multiple UEI registrations (e.g., Lockheed Martin). The `recipient_id` hash can be used for deduplication in a future pass.
 
-4. **Detail enrichment is the expensive step** -- Fetching `/awards/{id}/` for each award requires one API call per award (throttled to 2/sec). For 54 awards, this takes ~27 seconds on first run, then instant from cache.
+4. **Detail enrichment is the expensive step** -- Fetching `/awards/{id}/` for each award requires one API call per award (throttled to 2/sec). For 10,000 awards, first run takes ~90 min (mostly cached after that).
+
+5. **USAspending `time_period` filter is activity-based, not inception-based** -- Discovered during data audit: the `time_period` filter in `/search/spending_by_award/` selects awards with *any activity* (including modifications) during the period. This means a contract from 2013 with a 2023 modification appears in 2023 results. The `awardAmount` is cumulative from inception. This is now documented in every case report's "Data Scope & Interpretation" section.
+
+6. **Tautological signals must be suppressed, not just documented** -- When `--recipient=MIT` is used, R004 concentration for MIT is 100% by construction. Rather than just adding a note, the signaler now actively suppresses these signals via QueryContext. The verifier provides a safety-net check in case suppression is bypassed.
 
 ---
 
@@ -657,11 +699,13 @@ All configurable via `config/default.yaml`.
 ### Critical API Findings
 
 - **100 results/page max** on search; cursor-based pagination for >10K
+- **`time_period` filter is activity-based** -- selects awards with any modification during the period, not just awards starting in it. A 2013 contract modified in 2023 appears in 2023 results. `awardAmount` is cumulative from inception, not period spending.
 - **`number_of_offers_received` often null** -- even for competed contracts
 - **Recipient names inconsistent** -- same entity under multiple registrations
 - **No total result counts** -- must paginate to exhaustion
 - **DOD data has 90-day publication delay**
 - **Minimum date: 2007-10-01** for search endpoints
+- **`--recipient` search returns all agency awards** -- the search API returns awards matching the recipient keyword across the agency, but detail enrichment fetches all 10K even though only 54 are MIT (the rest are other DoD vendors matched by the broad agency filter)
 
 Full field mapping in `docs/api-analysis.md`.
 
@@ -738,17 +782,23 @@ signals:
 | **Transaction integration** -- `--with-transactions` flag for R005 | Done |
 | **AI-enhanced narrator** -- Claude refines per-hypothesis text | Done |
 | **Broader demo support** -- `--agency` is now optional | Done |
+| **Phase A** -- Multi-source enrichment clients (SAM.gov, OpenSanctions, sub-awards) | Done |
+| **Phase B** -- Opus 4.6 investigative agent (tool-calling loop, `--deep`) | Done |
+| **Phase C** -- Vega-Lite visual evidence (6 chart types + SVG renderer) | Done |
+| **Phase D** -- Interactive HTML dashboard (`dashboard.html`) | Done |
+| **Phase E** -- Pipeline integration + CLI flags (`--deep`, `--charts`, `--no-ai`) | Done |
+| **Phase F** -- Tests (enrichment, investigator, charts) | Done |
+| **QueryContext propagation** -- fix 5 systemic data interpretation issues | Done |
 
-### Next: Opus 4.6 Investigative Agent (Phases A-F)
+### Next: Output Quality Hardening
 
-| Phase | What | Files | Status |
-|-------|------|-------|--------|
-| A | Multi-source enrichment clients (SAM.gov, OpenSanctions, sub-awards) | 4 new | Planned |
-| B | Opus 4.6 investigative agent (tool-calling loop) | 2 new | Planned |
-| C | Vega-Lite visual evidence (chart specs + SVG renderer) | 2 new | Planned |
-| D | Interactive HTML dashboard | 1 new | Planned |
-| E | Pipeline integration + CLI flags (`--deep`, `--charts`) | 3 updates | Planned |
-| F | Tests (enrichment, investigator, charts) | 3 new + 2 updates | Planned |
+| Enhancement | What | Priority |
+|-------------|------|----------|
+| Period-specific obligation amounts | Use transaction sums instead of cumulative `awardAmount` for period-scoped metrics | High |
+| Cross-agency R004 suppression | Suppress trivially inevitable R004 when `--agency` filter yields a single agency | Medium |
+| Market-wide R006 peer groups | Fetch NAICS peers beyond the filtered dataset for true market IQR | Medium |
+| Recipient deduplication | Use `recipient_id` hash + parent company lookup from SAM.gov | Medium |
+| Bulk download fallback | `/download/awards/` for >10K record slices | Low |
 
 ### Long-Term (post-hackathon)
 
@@ -770,10 +820,11 @@ To resume development:
 
 1. **Read this document** -- contains full implementation state and decisions
 2. **Check git log** -- `git log --oneline` shows what's committed
-3. **Run tests** -- `npm test` (31 tests, all should pass)
+3. **Run tests** -- `npm test` (80 tests, all should pass)
 4. **Run typecheck** -- `npm run typecheck` (should be clean)
 5. **Check cache** -- `.cache/` preserves API data; re-runs are instant
 6. **Check cases/** -- previous investigation outputs preserved
+7. **Read "Data Interpretation Issues"** section -- documents known USAspending API semantics that affect output quality
 
 ### Key files for context
 
@@ -787,5 +838,5 @@ To resume development:
 | `src/shared/types.ts` | All shared type definitions |
 | `src/prover/analyzer.ts` | Evidence generation per hypothesis |
 | `src/narrator/enhancer.ts` | AI narrative enrichment |
-| `src/orchestrator/pipeline.ts` | 7-step pipeline runner (expanding to 8) |
+| `src/orchestrator/pipeline.ts` | 8-step pipeline runner with QueryContext propagation |
 | `exploration/README.md` | API exploration findings |

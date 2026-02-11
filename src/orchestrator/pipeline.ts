@@ -1,17 +1,27 @@
 /**
  * Investigation pipeline orchestrator.
- * Runs: Collector → Signaler → Hypothesis → Prover → Narrator → Verifier → case folder
+ * 8-step pipeline:
+ *   Collect → Signal → Investigate → Hypothesize → Prove → Enhance → Report+Dashboard → Verify
  */
 import type pino from "pino";
 import type { AppConfig } from "../cli/config.js";
-import type { InvestigationParams } from "../shared/types.js";
+import type { InvestigationParams, InvestigationFindings, ChartArtifact, QueryContext } from "../shared/types.js";
 import { runCollector } from "../collector/index.js";
+import { USAspendingClient } from "../collector/usaspending.js";
 import { SignalEngine } from "../signaler/engine.js";
 import { generateHypotheses } from "../hypothesis/generator.js";
 import { produceEvidence } from "../prover/analyzer.js";
+import { buildCharts } from "../prover/charts.js";
 import { assembleReport } from "../narrator/report.js";
 import { enhanceNarrative } from "../narrator/enhancer.js";
+import { buildDashboard } from "../narrator/dashboard.js";
 import { verifyReport } from "../verifier/checker.js";
+import { runInvestigativeAgent } from "../investigator/agent.js";
+import {
+  SamGovClient,
+  OpenSanctionsClient,
+  SubAwardsClient,
+} from "../enrichment/index.js";
 import { createProvenance } from "../shared/provenance.js";
 import { createCaseFolder, writeJson } from "../shared/fs.js";
 import { writeFile } from "node:fs/promises";
@@ -19,6 +29,9 @@ import { join } from "node:path";
 
 export interface PipelineOptions {
   withTransactions?: boolean;
+  deep?: boolean;
+  charts?: boolean;
+  noAi?: boolean;
 }
 
 export async function runInvestigation(
@@ -29,7 +42,10 @@ export async function runInvestigation(
 ): Promise<string> {
   const startTime = Date.now();
   const withTransactions = options.withTransactions ?? false;
-  const totalSteps = 7;
+  const deep = options.deep ?? false;
+  const chartsEnabled = options.charts !== false;
+  const aiEnabled = options.noAi ? false : config.ai.enabled;
+  const totalSteps = 8;
 
   // ─── Step 1: Collect ───────────────────────────────────────────────────
   logger.info(`Step 1/${totalSteps}: Collecting data from USAspending...`);
@@ -49,14 +65,23 @@ export async function runInvestigation(
     logger,
   );
 
+  // ─── Construct QueryContext ───────────────────────────────────────────
+  const queryContext: QueryContext = {
+    recipientFilter: params.recipient,
+    agencyFilter: params.agency,
+    periodStart: params.periodStart,
+    periodEnd: params.periodEnd,
+    isRecipientFiltered: !!params.recipient,
+    isAgencyFiltered: !!params.agency,
+  };
+
   // ─── Step 2: Compute Signals ───────────────────────────────────────────
   logger.info(`Step 2/${totalSteps}: Computing red-flag signals...`);
 
   const engine = new SignalEngine();
-  engine.initialize(config);
+  engine.initialize(config, undefined, queryContext);
   engine.processAwards(collectorResult.awards);
 
-  // Feed transaction data to indicators (R005) if available
   if (collectorResult.transactions.size > 0) {
     engine.processTransactions(collectorResult.transactions);
     logger.info(
@@ -72,21 +97,55 @@ export async function runInvestigation(
     "Signal computation complete",
   );
 
-  // ─── Step 3: Generate Hypotheses ───────────────────────────────────────
-  logger.info(`Step 3/${totalSteps}: Generating hypotheses...`);
+  // ─── Step 3: Investigate (--deep only) ─────────────────────────────────
+  let investigationFindings: InvestigationFindings | undefined;
+
+  if (deep && config.investigator.enabled) {
+    logger.info(`Step 3/${totalSteps}: Running Opus 4.6 investigative agent...`);
+
+    const deps = buildEnrichmentDeps(config, logger);
+
+    const hypothesesForAgent = await generateHypotheses(signalResult.signals, {
+      aiEnabled: false,
+      model: config.ai.model,
+      logger,
+    });
+
+    investigationFindings = await runInvestigativeAgent({
+      signals: signalResult.signals,
+      hypotheses: hypothesesForAgent,
+      awards: collectorResult.awards,
+      config: config.investigator,
+      deps,
+      logger,
+    });
+
+    logger.info(
+      {
+        iterations: investigationFindings.iterations,
+        toolCalls: investigationFindings.toolCallLog.length,
+        costUsd: investigationFindings.estimatedCostUsd.toFixed(4),
+      },
+      "Investigation complete",
+    );
+  } else {
+    logger.info(`Step 3/${totalSteps}: Skipping investigative agent (use --deep to enable)`);
+  }
+
+  // ─── Step 4: Generate Hypotheses ───────────────────────────────────────
+  logger.info(`Step 4/${totalSteps}: Generating hypotheses...`);
 
   const hypotheses = await generateHypotheses(signalResult.signals, {
-    aiEnabled: config.ai.enabled,
+    aiEnabled,
     model: config.ai.model,
     logger,
   });
 
   logger.info({ hypotheses: hypotheses.length }, "Hypotheses generated");
 
-  // ─── Step 4: Produce Evidence ──────────────────────────────────────────
-  logger.info(`Step 4/${totalSteps}: Producing evidence tables...`);
+  // ─── Step 5: Produce Evidence (CSVs + Charts) ─────────────────────────
+  logger.info(`Step 5/${totalSteps}: Producing evidence...`);
 
-  // Create case folder early so prover can write evidence files
   const caseFolder = await createCaseFolder(params.outputDir);
 
   const evidence = await produceEvidence({
@@ -97,19 +156,34 @@ export async function runInvestigation(
     evidenceDir: caseFolder.evidenceDir,
   });
 
-  logger.info({ artifacts: evidence.length }, "Evidence artifacts produced");
+  logger.info({ artifacts: evidence.length }, "CSV evidence artifacts produced");
 
-  // ─── Step 5: AI-Enhanced Narrative ─────────────────────────────────────
-  logger.info(`Step 5/${totalSteps}: Enhancing narrative...`);
+  let charts: ChartArtifact[] = [];
+  if (chartsEnabled) {
+    charts = await buildCharts({
+      awards: collectorResult.awards,
+      signals: signalResult.signals,
+      transactions: collectorResult.transactions,
+      config,
+      evidenceDir: caseFolder.evidenceDir,
+    });
+
+    if (charts.length > 0) {
+      logger.info({ charts: charts.length }, "Chart artifacts produced");
+    }
+  }
+
+  // ─── Step 6: AI-Enhanced Narrative ─────────────────────────────────────
+  logger.info(`Step 6/${totalSteps}: Enhancing narrative...`);
 
   const enhancedHypotheses = await enhanceNarrative(hypotheses, signalResult, {
-    aiEnabled: config.ai.enabled,
+    aiEnabled,
     model: config.ai.model,
     logger,
   });
 
-  // ─── Step 6: Assemble Report ───────────────────────────────────────────
-  logger.info(`Step 6/${totalSteps}: Assembling case report...`);
+  // ─── Step 7: Assemble Report + Dashboard ───────────────────────────────
+  logger.info(`Step 7/${totalSteps}: Assembling case report and dashboard...`);
 
   const provenance = createProvenance(
     params as unknown as Record<string, unknown>,
@@ -130,12 +204,33 @@ export async function runInvestigation(
     hypotheses: enhancedHypotheses,
     evidence,
     provenance,
+    charts,
+    investigationFindings,
+    queryContext,
   });
 
-  // ─── Step 7: Verify ─────────────────────────────────────────────────────
-  logger.info(`Step 7/${totalSteps}: Verifying report claims...`);
+  // Build interactive dashboard
+  const title = params.recipient
+    ? `${params.agency ?? "All Agencies"} → ${params.recipient}`
+    : params.agency ?? "Investigation";
 
-  const verification = verifyReport(report, signalResult);
+  const dashboardHtml = buildDashboard({
+    title,
+    generatedAt: provenance.timestamp,
+    params,
+    awards: collectorResult.awards.map((a) => a as unknown as Record<string, unknown>),
+    signals: signalResult.signals,
+    hypotheses: enhancedHypotheses,
+    evidence,
+    charts,
+    provenance,
+    investigationFindings,
+  });
+
+  // ─── Step 8: Verify ───────────────────────────────────────────────────
+  logger.info(`Step 8/${totalSteps}: Verifying report claims...`);
+
+  const verification = verifyReport(report, signalResult, queryContext);
   logger.info(
     { claims: verification.totalClaims, supported: verification.supported, unsupported: verification.unsupported },
     verification.passed ? "Verification passed" : "Verification found unsupported claims",
@@ -143,12 +238,17 @@ export async function runInvestigation(
 
   // ─── Write Case Folder ─────────────────────────────────────────────────
   await writeFile(caseFolder.caseReport, report, "utf-8");
+  await writeFile(join(caseFolder.path, "dashboard.html"), dashboardHtml, "utf-8");
   await writeJson(caseFolder.provenancePath, provenance);
   await writeJson(join(caseFolder.path, "signals.json"), signalResult);
   await writeJson(join(caseFolder.path, "hypotheses.json"), enhancedHypotheses);
   await writeJson(join(caseFolder.path, "verification.json"), verification);
   await writeJson(join(caseFolder.path, "awards.json"), collectorResult.awards);
   await writeJson(join(caseFolder.path, "evidence-manifest.json"), evidence);
+
+  if (investigationFindings) {
+    await writeJson(join(caseFolder.path, "investigation.json"), investigationFindings);
+  }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   logger.info(
@@ -157,4 +257,86 @@ export async function runInvestigation(
   );
 
   return caseFolder.path;
+}
+
+// ─── Enrichment Client Construction ──────────────────────────────────────────
+
+function buildEnrichmentDeps(
+  config: AppConfig,
+  logger: pino.Logger,
+): {
+  samGovClient?: SamGovClient;
+  openSanctionsClient?: OpenSanctionsClient;
+  subAwardsClient?: SubAwardsClient;
+  usaspendingClient?: USAspendingClient;
+} {
+  let samGovClient: SamGovClient | undefined;
+  let openSanctionsClient: OpenSanctionsClient | undefined;
+  let subAwardsClient: SubAwardsClient | undefined;
+  let usaspendingClient: USAspendingClient | undefined;
+
+  if (config.enrichment.samGov.enabled) {
+    try {
+      samGovClient = new SamGovClient({
+        baseUrl: config.enrichment.samGov.baseUrl,
+        exclusionsUrl: config.enrichment.samGov.exclusionsUrl,
+        requestsPerSecond: config.enrichment.samGov.requestsPerSecond,
+        maxRetries: config.enrichment.samGov.maxRetries,
+        cacheDirectory: config.cache.directory,
+        cacheEnabled: config.cache.enabled,
+        logger,
+      });
+    } catch (err) {
+      logger.warn({ error: (err as Error).message }, "SAM.gov client initialization failed");
+    }
+  }
+
+  if (config.enrichment.openSanctions.enabled) {
+    try {
+      openSanctionsClient = new OpenSanctionsClient({
+        baseUrl: config.enrichment.openSanctions.baseUrl,
+        dataset: config.enrichment.openSanctions.dataset,
+        scoreThreshold: config.enrichment.openSanctions.scoreThreshold,
+        maxRetries: config.enrichment.openSanctions.maxRetries,
+        cacheDirectory: config.cache.directory,
+        cacheEnabled: config.cache.enabled,
+        logger,
+      });
+    } catch (err) {
+      logger.warn({ error: (err as Error).message }, "OpenSanctions client initialization failed");
+    }
+  }
+
+  if (config.enrichment.subAwards.enabled) {
+    try {
+      subAwardsClient = new SubAwardsClient({
+        baseUrl: config.api.baseUrl,
+        requestsPerSecond: config.api.requestsPerSecond,
+        maxRetries: config.api.maxRetries,
+        maxPerAward: config.enrichment.subAwards.maxPerAward,
+        cacheDirectory: config.cache.directory,
+        cacheEnabled: config.cache.enabled,
+        logger,
+      });
+    } catch (err) {
+      logger.warn({ error: (err as Error).message }, "Sub-awards client initialization failed");
+    }
+  }
+
+  // Reuse USAspending client for award detail lookups
+  try {
+    usaspendingClient = new USAspendingClient({
+      baseUrl: config.api.baseUrl,
+      requestsPerSecond: config.api.requestsPerSecond,
+      maxRetries: config.api.maxRetries,
+      pageSize: config.api.pageSize,
+      cacheEnabled: config.cache.enabled,
+      cacheDirectory: config.cache.directory,
+      logger,
+    });
+  } catch (err) {
+    logger.warn({ error: (err as Error).message }, "USAspending client initialization failed");
+  }
+
+  return { samGovClient, openSanctionsClient, subAwardsClient, usaspendingClient };
 }

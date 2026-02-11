@@ -94,6 +94,21 @@ export class PriceOutliersIndicator extends BaseIndicator {
           const m = mean(sorted);
           const factor = m > 0 ? award.amount / m : 0;
 
+          let contextStr =
+              `Award ${award.id} ($${award.amount.toLocaleString()}) to ${award.recipient} ` +
+              `is ${factor.toFixed(1)}x the category mean ($${m.toLocaleString()}) ` +
+              `for ${categoryCode} (n=${group.amounts.length}). ` +
+              `Upper fence: $${upperFence.toLocaleString()} (${this.method} method).`;
+
+          // Add peer group caveat when working with a filtered dataset
+          if (
+            this.queryContext?.isRecipientFiltered &&
+            group.amounts.length < 20
+          ) {
+            contextStr +=
+              ` Note: peer group limited to filtered dataset (n=${group.amounts.length}) and may not represent the full NAICS market.`;
+          }
+
           signals.push({
             indicatorId: this.id,
             indicatorName: this.name,
@@ -103,11 +118,7 @@ export class PriceOutliersIndicator extends BaseIndicator {
             entityName: `${award.id} (${award.recipient})`,
             value: Math.round(factor * 10) / 10,
             threshold: Math.round(upperFence),
-            context:
-              `Award ${award.id} ($${award.amount.toLocaleString()}) to ${award.recipient} ` +
-              `is ${factor.toFixed(1)}x the category mean ($${m.toLocaleString()}) ` +
-              `for ${categoryCode} (n=${group.amounts.length}). ` +
-              `Upper fence: $${upperFence.toLocaleString()} (${this.method} method).`,
+            context: contextStr,
             affectedAwards: [award.id],
           });
         }

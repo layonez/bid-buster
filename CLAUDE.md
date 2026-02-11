@@ -25,9 +25,9 @@ Every finding must be:
 When starting a new session on this project:
 
 1. Read `docs/PROJECT_PLAN.md` -- comprehensive implementation state, decisions, and roadmap
-2. Run `npm test` -- 31 tests, all should pass
+2. Run `npm test` -- 80 tests, all should pass
 3. Run `npm run typecheck` -- should be clean (zero errors)
-4. The `.cache/` directory has API data from previous runs (instant re-runs)
+4. The `.cache/` directory has API data from previous runs (instant re-runs with `--no-ai`)
 5. Check `git log --oneline` to see latest work
 
 ## Where to Find Things
@@ -44,24 +44,29 @@ When starting a new session on this project:
 | API exploration samples | `exploration/` (7 JSON files + README) |
 | Reference repos (local only, gitignored) | `references/cardinal-rs/`, `references/ocdskit/`, `references/kingfisher-collect/` |
 | All indicator thresholds | `config/default.yaml` |
-| Core types | `src/shared/types.ts` |
+| Core types + QueryContext | `src/shared/types.ts` |
 | Indicator interface | `src/signaler/types.ts` |
 | Normalized data schema | `src/normalizer/schema.ts` |
 | API response types | `src/collector/types.ts` |
+| Enrichment client types | `src/enrichment/types.ts` |
+| Investigator agent types | `src/shared/types.ts` (`InvestigationFindings`, `ToolCallRecord`, etc.) |
+| Chart spec builders | `src/prover/charts.ts` |
+| Data interpretation issues & fixes | `docs/PROJECT_PLAN.md` → "Data Interpretation Issues Found & Fixed" |
 
 ## Architecture in 30 Seconds
 
 ```
-investigate run --agency=X --period=Y [--recipient=Z] [--deep] [--charts]
+investigate run --agency=X --period=Y [--recipient=Z] [--deep] [--charts] [--no-ai]
 
   1. Collector    → USAspending API → paginate → cache → normalize
-  2. Signaler     → 6 indicators × fold/finalize → signal table
-  3. Investigator → Opus 4.6 agent examines signals, fetches enrichment, iterates (--deep)
+                   → Construct QueryContext from params (filter awareness for all downstream steps)
+  2. Signaler     → 6 indicators × fold/finalize → signal table (QueryContext-aware: R004 tautology suppression, R006 peer caveats)
+  3. Investigator → Opus 4.6 agent examines signals, fetches enrichment, iterates (--deep only)
   4. Hypothesis   → templates + agent findings → non-accusatory questions
-  5. Prover       → CSV tables + SVG charts → evidence/ directory
+  5. Prover       → CSV tables + SVG charts (adaptive log-scale binning) → evidence/ directory
   6. Enhancer     → AI-refined per-hypothesis narrative (Claude Sonnet)
-  7. Narrator     → case.md + dashboard.html (disclaimer, signals, hypotheses, evidence)
-  8. Verifier     → cross-check every claim against signal data → pass/fail
+  7. Narrator     → case.md (with "Data Scope & Interpretation" section) + dashboard.html
+  8. Verifier     → cross-check every claim + tautology detection → pass/fail
 
 Output: cases/case-YYYY-MM-DD/ (case.md + dashboard.html + JSON artifacts + evidence/)
 ```
@@ -94,8 +99,8 @@ Output: cases/case-YYYY-MM-DD/ (case.md + dashboard.html + JSON artifacts + evid
 - `simple-statistics` for quartile/IQR calculations
 - `@anthropic-ai/sdk` for Claude API -- always with graceful fallback
 - `cosmiconfig` for config discovery; `pino` for structured logging
+- `vega` + `vega-lite` for SVG chart rendering (no `node-canvas` needed)
 - **Do not add** heavy frameworks (express, fastify) unless explicitly needed
-- **Do not add** chart/visualization deps until the prover agent is actively being built
 
 ### Testing
 - `vitest` (ESM-native, fast)
@@ -140,10 +145,11 @@ Indicators follow the **fold/finalize** pattern (inspired by Cardinal-rs):
 
 ```typescript
 interface Indicator {
-  configure(settings): void;     // Apply thresholds from config
-  fold(award): void;             // Process one record at a time
-  finalize(): Signal[];          // Produce signals after all records processed
-  getMetadata(): IndicatorMetadata;  // Report thresholds used + data coverage
+  configure(settings): void;          // Apply thresholds from config
+  setQueryContext?(ctx): void;        // Receive filter context (optional, for filter-aware behavior)
+  fold(award): void;                  // Process one record at a time
+  finalize(): Signal[];               // Produce signals after all records processed
+  getMetadata(): IndicatorMetadata;   // Report thresholds used + data coverage
 }
 ```
 
@@ -161,6 +167,16 @@ Every indicator MUST:
 - Report **metadata** (thresholds used, data coverage percentage)
 - Produce **signals with context** (human-readable explanation of what was found)
 - Handle **missing data gracefully** (skip records with null required fields, report coverage)
+- Be **filter-aware** when relevant -- use `this.queryContext` to suppress tautological signals or add caveats when operating on a filtered dataset
+
+### QueryContext Pattern
+
+`QueryContext` (`src/shared/types.ts`) is constructed once in the pipeline from CLI params and threaded to:
+- **SignalEngine** → each indicator via `setQueryContext()` (e.g., R004 suppresses tautological signals, R006 adds peer group caveats)
+- **Report assembler** → generates "Data Scope & Interpretation" section with filter notes
+- **Verifier** → tautology detection safety net (flags R004 signals matching the recipient filter)
+
+When adding new filter-aware behavior, use `this.queryContext?.isRecipientFiltered` / `this.queryContext?.isAgencyFiltered` rather than parsing params independently.
 
 ---
 
@@ -173,13 +189,20 @@ Every indicator MUST:
 - Handle HTTP 429 (rate limit) and 500 (transient) with exponential backoff
 - Use cursor-based pagination (`last_record_unique_id`) for large result sets
 - Award detail (`/awards/{id}/`) is the expensive call -- one per award, but provides competition data
+- **CRITICAL: `time_period` filter is activity-based** -- selects awards with any modification during the period, not just awards starting in it. A 2013 contract modified in 2023 appears in 2023 results. `awardAmount` is always cumulative from contract inception, not period spending. This is documented in every case report's "Data Scope & Interpretation" section.
+
+### Enrichment APIs (used by `--deep` investigative agent)
+- **SAM.gov** (`src/enrichment/sam-gov.ts`): Entity verification, exclusion/debarment screening. Free API key from `SAM_GOV_API_KEY` env var. Rate limit: 1000 req/day.
+- **OpenSanctions** (`src/enrichment/open-sanctions.ts`): Sanctions/PEP fuzzy screening. API key from `OPENSANCTIONS_API_KEY` env var. Optional -- skipped gracefully if missing.
+- **Sub-Awards** (`src/enrichment/subawards.ts`): USAspending sub-award data. No auth required.
 
 ### Claude API
-- Used for **hypothesis enhancement only** (executive assessment)
-- Model: `claude-sonnet-4-5-20250929` with `max_tokens: 512` (cost-efficient)
+- **Investigative agent** (`--deep`): `claude-opus-4-6` with `max_tokens: 4096` and tool-calling
+- **Hypothesis enhancement**: `claude-sonnet-4-5-20250929` with `max_tokens: 512` (cost-efficient)
 - **Always** wrap in try/catch with graceful fallback to template-only output
-- System prompt enforces non-accusatory tone
+- System prompts enforce non-accusatory tone
 - API key loaded from `.env` via `dotenv`
+- Use `--no-ai` flag to skip all AI calls (fast runs, template-only output)
 
 ---
 
@@ -207,25 +230,29 @@ Every indicator MUST:
 
 ## Current State (update after each session)
 
-**Enhanced MVP is complete.** 33 TypeScript files, ~3,900 lines, 31 tests passing.
+**Full 8-step pipeline complete.** 41+ TypeScript files, ~5,960 lines, 80 tests passing.
 
-Working 7-step pipeline: `investigate run --agency="Department of Defense" --recipient="MIT" --period=2023-01-01:2023-12-31` produces a verified case folder with:
-- CSV evidence tables per hypothesis in `evidence/` directory
-- AI-enhanced per-hypothesis narratives (Claude Sonnet)
-- AI executive assessment
-- Evidence artifact links in case.md
-- Transaction support via `--with-transactions` flag for R005
+Working pipeline: `investigate run --agency="Department of Defense" --recipient="MIT" --period=2023-01-01:2023-12-31 --charts` produces a verified case folder with:
+- QueryContext-aware signal computation (tautological R004 suppressed, R006 peer caveats)
+- CSV evidence tables + SVG charts (6 chart types with adaptive log-scale binning)
+- Interactive HTML dashboard (`dashboard.html`)
+- AI-enhanced per-hypothesis narratives (Claude Sonnet) and executive assessment
+- "Data Scope & Interpretation" section explaining cumulative values and filter implications
+- Verifier with tautology detection (2,716/2,716 claims verified on full DoD dataset)
+- Opus 4.6 investigative agent available via `--deep` flag
 
-**Completed enhancements:**
-1. Prover agent -- CSV evidence tables per hypothesis (all 6 indicators + master summary)
-2. AI-enhanced narrator -- Claude refines each hypothesis with balanced analysis
-3. Transaction integration -- `--with-transactions` flag feeds R005 indicator
-4. Broader demo support -- `--agency` is now optional (at least one of --agency or --recipient required)
+**Completed (all phases):**
+1. Phases A-F -- enrichment clients, Opus 4.6 investigator, charts, dashboard, pipeline integration, tests
+2. QueryContext propagation -- fixes 5 systemic data interpretation issues (see PROJECT_PLAN.md)
 
-**Next: Opus 4.6 Investigative Agent** (see `docs/PROJECT_PLAN.md` → Next Implementation):
-- Phase A: Multi-source enrichment clients (SAM.gov, OpenSanctions, sub-awards)
-- Phase B: Opus 4.6 autonomous investigative agent (tool-calling loop)
-- Phase C: Vega-Lite visual evidence (SVG charts)
-- Phase D: Interactive HTML dashboard
-- Phase E: Pipeline integration + CLI flags (`--deep`, `--charts`)
-- Phase F: Tests for all new components
+**Known USAspending data semantics (critical for interpreting output):**
+- `time_period` filter is activity-based: 66.7% of MIT awards had `startDate` before 2023 (2013-2022 contracts with 2023 modifications)
+- `awardAmount` is cumulative from inception, not period spending ($1.59B MIT Lincoln Lab contract from 2016)
+- `--recipient` search returns all agency awards (10K total), then normalizer filters to 54 MIT awards
+- Award amount ranges can span 200,000x+ ($7.9K to $1.59B) -- log-scale binning handles this
+
+**Next priorities (output quality hardening):**
+- Period-specific obligation amounts via transaction sums instead of cumulative `awardAmount`
+- Cross-agency R004 suppression when `--agency` yields a single agency
+- Market-wide R006 peer groups (fetch NAICS peers beyond filtered dataset)
+- Recipient deduplication via `recipient_id` hash + SAM.gov parent company lookup

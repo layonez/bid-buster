@@ -3,7 +3,7 @@
  * Inspired by Cardinal-rs Calculate trait: configure → fold → finalize.
  */
 import type { NormalizedAward, Transaction } from "../../normalizer/schema.js";
-import type { Signal } from "../../shared/types.js";
+import type { Signal, QueryContext } from "../../shared/types.js";
 import type {
   Indicator,
   IndicatorConfig,
@@ -17,6 +17,11 @@ export abstract class BaseIndicator implements Indicator {
 
   protected totalRecords = 0;
   protected recordsWithRequiredFields = 0;
+  protected queryContext?: QueryContext;
+
+  setQueryContext(context: QueryContext): void {
+    this.queryContext = context;
+  }
 
   configure(_settings: IndicatorConfig): void {
     // Override in subclasses to apply settings

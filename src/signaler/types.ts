@@ -4,7 +4,7 @@
  *   configure → fold (per-record) → finalize (produce signals)
  */
 import type { NormalizedAward, Transaction } from "../normalizer/schema.js";
-import type { Signal } from "../shared/types.js";
+import type { Signal, QueryContext } from "../shared/types.js";
 
 // ─── Indicator Configuration ─────────────────────────────────────────────────
 
@@ -52,6 +52,9 @@ export interface Indicator {
 
   /** Finalize computation and produce signals */
   finalize(): Signal[];
+
+  /** Receive query context so indicators can adapt to active filters */
+  setQueryContext?(context: QueryContext): void;
 
   /** Return metadata about this indicator run for transparency */
   getMetadata(): IndicatorMetadata;

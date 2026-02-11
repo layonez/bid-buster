@@ -175,6 +175,39 @@ describe("R004: ConcentrationIndicator", () => {
     expect(signals[0].entityName).toBe("BigCo");
     expect(signals[0].value).toBeCloseTo(80, 0);
   });
+
+  it("should suppress tautological signal when recipient-filtered", () => {
+    indicator.setQueryContext({
+      recipientFilter: "BigCo",
+      periodStart: "2023-01-01",
+      periodEnd: "2023-12-31",
+      isRecipientFiltered: true,
+      isAgencyFiltered: false,
+    });
+    indicator.fold(
+      makeAward({ recipientName: "BigCo", awardAmount: 800000 }),
+    );
+    indicator.fold(
+      makeAward({ recipientName: "SmallCo", awardAmount: 200000 }),
+    );
+
+    const signals = indicator.finalize();
+    // BigCo signal suppressed; SmallCo is below threshold so no signals
+    expect(signals).toHaveLength(0);
+  });
+
+  it("should not suppress signals without queryContext", () => {
+    indicator.fold(
+      makeAward({ recipientName: "BigCo", awardAmount: 800000 }),
+    );
+    indicator.fold(
+      makeAward({ recipientName: "SmallCo", awardAmount: 200000 }),
+    );
+
+    const signals = indicator.finalize();
+    expect(signals).toHaveLength(1);
+    expect(signals[0].entityName).toBe("BigCo");
+  });
 });
 
 describe("R006: PriceOutliersIndicator", () => {
@@ -213,5 +246,37 @@ describe("R006: PriceOutliersIndicator", () => {
     const signals = indicator.finalize();
     expect(signals.length).toBeGreaterThanOrEqual(1);
     expect(signals[0].affectedAwards).toContain("P-OUTLIER");
+  });
+
+  it("should add peer group caveat when recipient-filtered with small group", () => {
+    indicator.setQueryContext({
+      recipientFilter: "ACME",
+      periodStart: "2023-01-01",
+      periodEnd: "2023-12-31",
+      isRecipientFiltered: true,
+      isAgencyFiltered: false,
+    });
+
+    const normalAmounts = [100000, 110000, 105000, 95000, 108000];
+    normalAmounts.forEach((amount, i) => {
+      indicator.fold(
+        makeAward({
+          awardId: `P-00${i}`,
+          awardAmount: amount,
+          naicsCode: "541330",
+        }),
+      );
+    });
+    indicator.fold(
+      makeAward({
+        awardId: "P-OUTLIER",
+        awardAmount: 500000,
+        naicsCode: "541330",
+      }),
+    );
+
+    const signals = indicator.finalize();
+    expect(signals.length).toBeGreaterThanOrEqual(1);
+    expect(signals[0].context).toContain("limited to filtered dataset");
   });
 });

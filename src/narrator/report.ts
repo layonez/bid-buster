@@ -7,6 +7,9 @@ import type {
   EvidenceArtifact,
   InvestigationParams,
   Provenance,
+  ChartArtifact,
+  InvestigationFindings,
+  QueryContext,
 } from "../shared/types.js";
 import type { SignalEngineResult } from "../signaler/types.js";
 
@@ -16,6 +19,9 @@ export interface ReportData {
   hypotheses: Hypothesis[];
   evidence: EvidenceArtifact[];
   provenance: Provenance;
+  charts?: ChartArtifact[];
+  investigationFindings?: InvestigationFindings;
+  queryContext?: QueryContext;
 }
 
 export function assembleReport(data: ReportData): string {
@@ -29,6 +35,8 @@ export function assembleReport(data: ReportData): string {
 
   lines.push(`# Investigation Case File: ${title}`);
   lines.push(`## Period: ${params.periodStart} to ${params.periodEnd}`);
+  lines.push("");
+  lines.push("**[Open Interactive Dashboard](dashboard.html)** for charts, sortable tables, and visual evidence.");
   lines.push("");
 
   // ─── Disclaimer ────────────────────────────────────────────────────────
@@ -66,6 +74,19 @@ export function assembleReport(data: ReportData): string {
   lines.push(`- **Award types:** ${params.awardTypeCodes.join(", ")}`);
   lines.push("");
 
+  // ─── Data Scope & Interpretation ──────────────────────────────────────
+  lines.push("## Data Scope & Interpretation");
+  lines.push("");
+  lines.push("- **Award amounts** shown are cumulative contract values from inception, not spending within the queried period alone.");
+  lines.push(`- The **time_period** filter (${params.periodStart} to ${params.periodEnd}) selects awards with activity during this period; awards may have start dates outside this range.`);
+  if (data.queryContext?.isRecipientFiltered) {
+    lines.push(`- **Recipient filter active** (\`${data.queryContext.recipientFilter}\`): all metrics (concentration, peer groups, competition rates) reflect only this recipient's awards, not the full agency portfolio.`);
+  }
+  if (data.queryContext?.isAgencyFiltered) {
+    lines.push(`- **Agency filter active** (\`${data.queryContext.agencyFilter}\`): metrics are scoped to this agency's awards only.`);
+  }
+  lines.push("");
+
   // ─── Signals ───────────────────────────────────────────────────────────
   lines.push("## Signals Detected");
   lines.push("");
@@ -98,6 +119,15 @@ export function assembleReport(data: ReportData): string {
     lines.push(hypothesis.context);
     lines.push("");
 
+    // Embed chart images for this hypothesis
+    const relatedCharts = (data.charts ?? []).filter(
+      (c) => c.hypothesisIds.includes(hypothesis.id),
+    );
+    for (const chart of relatedCharts) {
+      lines.push(`![${chart.title}](${chart.filePath})`);
+      lines.push("");
+    }
+
     // Link evidence artifacts for this hypothesis
     const relatedEvidence = data.evidence.filter(
       (e) => e.hypothesisId === hypothesis.id,
@@ -117,6 +147,27 @@ export function assembleReport(data: ReportData): string {
     lines.push("");
   }
 
+  // ─── Investigator Findings (--deep mode) ────────────────────────────────
+  if (data.investigationFindings && data.investigationFindings.summary) {
+    lines.push("## Investigator Findings");
+    lines.push("");
+    lines.push(`*Opus 4.6 agent completed ${data.investigationFindings.iterations} iteration(s) with ${data.investigationFindings.toolCallLog.length} tool call(s).*`);
+    lines.push("");
+    lines.push(data.investigationFindings.summary);
+    lines.push("");
+
+    if (data.investigationFindings.crossReferences.length > 0) {
+      lines.push("### Cross-References");
+      lines.push("");
+      lines.push("| Source A | Source B | Finding | Impact |");
+      lines.push("|----------|---------|---------|--------|");
+      for (const cr of data.investigationFindings.crossReferences) {
+        lines.push(`| ${cr.sourceA} | ${cr.sourceB} | ${cr.finding.slice(0, 60)}... | ${cr.impact} |`);
+      }
+      lines.push("");
+    }
+  }
+
   // ─── Data Quality ──────────────────────────────────────────────────────
   lines.push("## Data Quality & Coverage");
   lines.push("");
@@ -133,7 +184,11 @@ export function assembleReport(data: ReportData): string {
   lines.push("**Notes:**");
   lines.push("- `number_of_offers_received` has poor fill rates in USAspending data, limiting R001 coverage.");
   lines.push("- R005 (Modifications) requires transaction data fetched with `--with-transactions` flag.");
-  lines.push("- R004 (Concentration) signals are expected when filtering by a single recipient.");
+  if (data.queryContext?.isRecipientFiltered) {
+    lines.push("- R004 (Concentration) signals for the filtered recipient are suppressed as structurally inevitable.");
+  } else {
+    lines.push("- R004 (Concentration) signals are expected when filtering by a single recipient.");
+  }
   lines.push("");
 
   // ─── Methodology ───────────────────────────────────────────────────────

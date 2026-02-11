@@ -2,7 +2,7 @@
  * Verifier agent: cross-checks claims in the report against signal data.
  * Ensures every factual statement is backed by computed evidence.
  */
-import type { Signal } from "../shared/types.js";
+import type { Signal, QueryContext } from "../shared/types.js";
 import type { SignalEngineResult } from "../signaler/types.js";
 
 export interface VerificationResult {
@@ -26,6 +26,7 @@ interface VerificationDetail {
 export function verifyReport(
   reportContent: string,
   signalResult: SignalEngineResult,
+  queryContext?: QueryContext,
 ): VerificationResult {
   const details: VerificationDetail[] = [];
 
@@ -82,7 +83,24 @@ export function verifyReport(
     status: methPresent ? "supported" : "unsupported",
   });
 
-  // Check 6: Provenance section present
+  // Check 6: Tautological R004 detection (safety net)
+  if (queryContext?.isRecipientFiltered) {
+    for (const signal of signalResult.signals) {
+      if (
+        signal.indicatorId === "R004" &&
+        queryContext.recipientFilter &&
+        signal.entityName.toUpperCase().includes(queryContext.recipientFilter.toUpperCase())
+      ) {
+        details.push({
+          claim: `R004 signal for filtered recipient "${signal.entityName}" is tautological`,
+          status: "unsupported",
+          evidenceRef: "queryContext → recipient filter matches R004 entity",
+        });
+      }
+    }
+  }
+
+  // Check 7: Provenance section present
   const provPresent = reportContent.includes("Provenance");
   details.push({
     claim: "Provenance section is present",

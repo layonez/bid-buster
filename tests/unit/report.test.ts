@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { assembleReport } from "../../src/narrator/report.js";
 import type { ReportData } from "../../src/narrator/report.js";
+import { verifyReport } from "../../src/verifier/checker.js";
 
 function makeReportData(): ReportData {
   return {
@@ -118,5 +119,69 @@ describe("Report Assembly", () => {
   it("should label evidence needed as 'for further review'", () => {
     const report = assembleReport(makeReportData());
     expect(report).toContain("Evidence needed for further review:");
+  });
+
+  it("should include Data Scope section with recipient filter note", () => {
+    const data = makeReportData();
+    data.queryContext = {
+      recipientFilter: "MIT",
+      agencyFilter: "Department of Defense",
+      periodStart: "2023-01-01",
+      periodEnd: "2023-12-31",
+      isRecipientFiltered: true,
+      isAgencyFiltered: true,
+    };
+    const report = assembleReport(data);
+    expect(report).toContain("Data Scope & Interpretation");
+    expect(report).toContain("cumulative contract values from inception");
+    expect(report).toContain("Recipient filter active");
+    expect(report).toContain("Agency filter active");
+  });
+});
+
+describe("Verifier Tautology Detection", () => {
+  it("should flag R004 signal matching recipient filter as unsupported", () => {
+    const data = makeReportData();
+    // Add a tautological R004 signal
+    data.signalResult.signals.push({
+      indicatorId: "R004",
+      indicatorName: "Vendor Concentration",
+      severity: "high",
+      entityType: "recipient",
+      entityId: "MIT",
+      entityName: "MIT",
+      value: 95,
+      threshold: 30,
+      context: "95% concentration",
+      affectedAwards: ["A-001"],
+    });
+    data.signalResult.summary.totalSignals = 2;
+
+    const report = assembleReport(data);
+    const queryContext = {
+      recipientFilter: "MIT",
+      periodStart: "2023-01-01",
+      periodEnd: "2023-12-31",
+      isRecipientFiltered: true,
+      isAgencyFiltered: false,
+    };
+
+    const result = verifyReport(report, data.signalResult, queryContext);
+    const tautologyDetail = result.details.find(
+      (d) => d.claim.includes("tautological"),
+    );
+    expect(tautologyDetail).toBeDefined();
+    expect(tautologyDetail!.status).toBe("unsupported");
+  });
+
+  it("should not flag tautology without queryContext", () => {
+    const data = makeReportData();
+    const report = assembleReport(data);
+
+    const result = verifyReport(report, data.signalResult);
+    const tautologyDetail = result.details.find(
+      (d) => d.claim.includes("tautological"),
+    );
+    expect(tautologyDetail).toBeUndefined();
   });
 });

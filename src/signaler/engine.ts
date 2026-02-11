@@ -4,6 +4,7 @@
  */
 import type { NormalizedAward, Transaction } from "../normalizer/schema.js";
 import type { AppConfig } from "../cli/config.js";
+import type { QueryContext } from "../shared/types.js";
 import type { Indicator, SignalEngineResult } from "./types.js";
 import { SingleBidIndicator } from "./indicators/single-bid.js";
 import { NonCompetitiveIndicator } from "./indicators/non-competitive.js";
@@ -43,8 +44,9 @@ export class SignalEngine {
 
   /**
    * Initialize indicators from config. Only enabled indicators are loaded.
+   * Optionally accepts a QueryContext to propagate filter awareness.
    */
-  initialize(config: AppConfig, indicatorFilter?: string[]): void {
+  initialize(config: AppConfig, indicatorFilter?: string[], queryContext?: QueryContext): void {
     const registry = createIndicatorRegistry();
 
     for (const [configKey, indicatorId] of Object.entries(CONFIG_KEY_TO_ID)) {
@@ -60,6 +62,9 @@ export class SignalEngine {
 
       const indicator = factory();
       indicator.configure(settings);
+      if (queryContext) {
+        indicator.setQueryContext?.(queryContext);
+      }
       this.indicators.push(indicator);
     }
   }
