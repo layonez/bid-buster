@@ -103,8 +103,8 @@ async function produceScopedEvidence(input: ProverInput): Promise<EvidenceArtifa
       severity: finding.severity,
     };
 
-    // R004 needs full dataset for market share context; all others use scoped awards
-    const awardsForEvidence = finding.indicatorId === "R004" ? input.awards : scopedAwards;
+    // R004 needs full dataset for market share context; R006 needs full NAICS peer group
+    const awardsForEvidence = (finding.indicatorId === "R004" || finding.indicatorId === "R006") ? input.awards : scopedAwards;
 
     const produced = await produceEvidenceForIndicator(
       finding.indicatorId,

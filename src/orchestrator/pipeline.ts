@@ -9,13 +9,14 @@ import type { InvestigationParams, InvestigationFindings, ChartArtifact, QueryCo
 import { runCollector } from "../collector/index.js";
 import { USAspendingClient } from "../collector/usaspending.js";
 import { SignalEngine } from "../signaler/engine.js";
-import { consolidateSignals } from "../signaler/consolidator.js";
+import { consolidateSignals, computeConvergence } from "../signaler/consolidator.js";
 import { generateHypotheses } from "../hypothesis/generator.js";
 import { produceEvidence } from "../prover/analyzer.js";
 import { buildCharts } from "../prover/charts.js";
 import { assembleReport } from "../narrator/report.js";
 import { enhanceNarrative } from "../narrator/enhancer.js";
-import { generateBriefing } from "../narrator/briefing.js";
+import { generateBriefing, generateAiNarrative } from "../narrator/briefing.js";
+import { buildAwardUrlMap } from "../shared/urls.js";
 import { renderNarrative } from "../narrator/narrative.js";
 import { buildDashboard } from "../narrator/dashboard.js";
 import { verifyReport } from "../verifier/checker.js";
@@ -159,6 +160,15 @@ export async function runInvestigation(
     logger.info(`Step 3/${totalSteps}: Skipping investigative agent (use --deep to enable)`);
   }
 
+  // ─── Step 3.5: Convergence Analysis ──────────────────────────────────
+  const convergenceEntities = computeConvergence(materialFindings);
+  if (convergenceEntities.length > 0) {
+    logger.info(
+      { convergentEntities: convergenceEntities.length, topIndicatorCount: convergenceEntities[0]?.indicators.length },
+      "Multi-signal convergence entities identified",
+    );
+  }
+
   // ─── Step 4: Generate Hypotheses ───────────────────────────────────────
   logger.info(`Step 4/${totalSteps}: Generating hypotheses...`);
 
@@ -201,7 +211,7 @@ export async function runInvestigation(
       signals: signalResult.signals,
       transactions: collectorResult.transactions,
       config,
-      evidenceDir: caseFolder.evidenceDir,
+      evidenceDir: caseFolder.chartsDir,
     });
 
     if (charts.length > 0) {
@@ -212,11 +222,59 @@ export async function runInvestigation(
   // ─── Step 6: AI-Enhanced Narrative ─────────────────────────────────────
   logger.info(`Step 6/${totalSteps}: Enhancing narrative...`);
 
-  const enhancedHypotheses = await enhanceNarrative(hypotheses, signalResult, {
+  // Filter to material-finding-linked hypotheses only (cost-efficient: ~11 vs 613)
+  const materialIndicatorEntities = new Set(
+    materialFindings.map((f) => `${f.indicatorId}::${f.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, "")}`),
+  );
+  const materialHypotheses = hypotheses.filter((h) => {
+    if (h.id === "H-EXECUTIVE") return true;
+    return h.signalIds.some((sid) =>
+      materialIndicatorEntities.has(
+        `${sid}::${h.id.replace(/^H-[A-Z0-9]+-/, "").slice(0, 10)}`,
+      ),
+    ) || materialFindings.some((f) =>
+      h.signalIds.includes(f.indicatorId) &&
+      h.id.includes(f.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, "")),
+    );
+  });
+
+  logger.info(
+    { total: hypotheses.length, material: materialHypotheses.length },
+    "Filtered hypotheses to material-finding-linked for AI enhancement",
+  );
+
+  const enhancedMaterial = await enhanceNarrative(materialHypotheses, signalResult, {
     aiEnabled,
     model: config.ai.model,
     logger,
   });
+
+  // Merge: enhanced material hypotheses replace originals, rest stay as-is
+  const enhancedMap = new Map(enhancedMaterial.map((h) => [h.id, h]));
+  const enhancedHypotheses = hypotheses.map((h) => enhancedMap.get(h.id) ?? h);
+
+  // Generate AI narrative for briefing + dashboard executive summary
+  const aiNarrative = await generateAiNarrative(
+    materialFindings,
+    params,
+    collectorResult.awards.length,
+    signalResult.summary.totalSignals,
+    { aiEnabled, logger },
+  );
+
+  // If we have an AI narrative, set it as the H-EXECUTIVE context for dashboard display
+  if (aiNarrative) {
+    const execIdx = enhancedHypotheses.findIndex((h) => h.id === "H-EXECUTIVE");
+    if (execIdx >= 0) {
+      enhancedHypotheses[execIdx] = {
+        ...enhancedHypotheses[execIdx],
+        context: aiNarrative,
+      };
+    }
+  }
+
+  // Build award URL map for USAspending links
+  const awardUrlMap = buildAwardUrlMap(collectorResult.awards);
 
   // ─── Step 7: Assemble Report + Dashboard ───────────────────────────────
   logger.info(`Step 7/${totalSteps}: Assembling case report and dashboard...`);
@@ -273,6 +331,7 @@ export async function runInvestigation(
     provenance,
     investigationFindings,
     materialFindings,
+    convergenceEntities,
   });
 
   // ─── Step 8: Verify ───────────────────────────────────────────────────
@@ -293,6 +352,9 @@ export async function runInvestigation(
     queryContext,
     totalAwards: collectorResult.awards.length,
     totalSignals: signalResult.summary.totalSignals,
+    aiNarrative,
+    awardUrlMap,
+    convergenceEntities,
   });
   await writeFile(join(caseFolder.path, "README.md"), briefing, "utf-8");
 
@@ -307,6 +369,9 @@ export async function runInvestigation(
   await writeJson(join(caseFolder.dataDir, "verification.json"), verification);
   await writeJson(join(caseFolder.dataDir, "evidence-manifest.json"), evidence);
   await writeJson(join(caseFolder.dataDir, "findings.json"), materialFindings);
+  if (convergenceEntities.length > 0) {
+    await writeJson(join(caseFolder.dataDir, "convergence.json"), convergenceEntities);
+  }
 
   // Raw awards data is large (~11 MB for DoD); only write with --full-evidence
   if (options.fullEvidence) {

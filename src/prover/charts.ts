@@ -546,7 +546,7 @@ async function buildAndRender(
       type: chartType,
       title,
       description,
-      filePath: `evidence/${filename}`,
+      filePath: `evidence/charts/${filename}`,
       hypothesisIds,
       indicatorIds,
       spec: spec as unknown as Record<string, unknown>,

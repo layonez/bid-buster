@@ -6,7 +6,7 @@
  * - Material findings section, signal table, hypothesis cards, evidence links, provenance trail
  * - Full data available in data/*.json sidecar files
  */
-import type { DashboardData, Signal, Hypothesis, EvidenceArtifact, MaterialFinding } from "../shared/types.js";
+import type { DashboardData, Signal, Hypothesis, EvidenceArtifact, MaterialFinding, ConvergenceEntity } from "../shared/types.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -83,6 +83,7 @@ export function buildDashboard(data: DashboardData): string {
     provenance,
     investigationFindings,
     materialFindings,
+    convergenceEntities,
   } = data;
 
   const awardCount = data.awards.length;
@@ -173,6 +174,9 @@ ${buildStyles()}
     ${investigationFindings ? `<div class="exec-summary"><strong>Investigator Assessment:</strong> ${escapeHtml(investigationFindings.summary)}</div>` : ""}
   </section>
 
+  <!-- ─── Convergence Analysis ─────────────────────────────────────── -->
+  ${convergenceEntities && convergenceEntities.length > 0 ? buildConvergenceSection(convergenceEntities) : ""}
+
   <!-- ─── Material Findings ────────────────────────────────────────── -->
   ${materialFindings && materialFindings.length > 0 ? buildMaterialFindingsSection(materialFindings) : ""}
 
@@ -250,7 +254,12 @@ ${buildStyles()}
       id: f.id, entityName: f.entityName, indicatorId: f.indicatorId, indicatorName: f.indicatorName,
       severity: f.severity, materialityScore: f.materialityScore, totalDollarValue: f.totalDollarValue,
       signalCount: f.signalCount, affectedAwardIds: f.affectedAwardIds.slice(0, 10),
-      fiveCs: f.fiveCs, aiTag: f.aiTag,
+      fiveCs: f.fiveCs, aiTag: f.aiTag, entityContext: f.entityContext,
+    })),
+    convergenceEntities: (convergenceEntities ?? []).map((ce) => ({
+      entityName: ce.entityName, indicators: ce.indicators,
+      totalExposure: ce.totalExposure, convergenceScore: ce.convergenceScore,
+      findingCount: ce.findings.length,
     })),
     investigationFindings: data.investigationFindings
       ? {
@@ -301,6 +310,11 @@ function buildMaterialFindingsSection(findings: MaterialFinding[]): string {
         </div>`
       : `<p>${escapeHtml(truncateContext(f.signals[0]?.context ?? ""))}</p>`;
 
+    // Entity context metadata line
+    const entityCtxHtml = f.entityContext
+      ? buildEntityContextHtml(f.entityContext)
+      : "";
+
     return `<div class="finding-card ${sevClass}">
       <div class="finding-header">
         <span class="finding-id">${escapeHtml(f.id)}</span>
@@ -308,6 +322,7 @@ function buildMaterialFindingsSection(findings: MaterialFinding[]): string {
         ${tag}
         <span class="finding-title">${escapeHtml(f.indicatorName)} — ${escapeHtml(f.entityName)}</span>
       </div>
+      ${entityCtxHtml}
       <div class="finding-stats">
         <span class="stat"><strong>Exposure:</strong> ${exposure}</span>
         <span class="stat"><strong>Awards:</strong> ${f.affectedAwardIds.length}</span>
@@ -321,6 +336,57 @@ function buildMaterialFindingsSection(findings: MaterialFinding[]): string {
     <h2>Material Findings</h2>
     <p class="section-subtitle">${findings.length} findings ranked by materiality (dollar exposure × severity × signal count)</p>
     ${cards}
+  </section>`;
+}
+
+function buildEntityContextHtml(ctx: NonNullable<MaterialFinding["entityContext"]>): string {
+  const parts: string[] = [];
+  if (ctx.naicsDescription) parts.push(escapeHtml(ctx.naicsDescription));
+  if (ctx.setAsideType) parts.push(`Set-aside: ${escapeHtml(ctx.setAsideType)}`);
+  parts.push(`${ctx.totalAwardsInDataset} awards in dataset`);
+  if (ctx.firstAwardDate && ctx.lastAwardDate) {
+    parts.push(`active ${escapeHtml(ctx.firstAwardDate)} to ${escapeHtml(ctx.lastAwardDate)}`);
+  }
+  return `<div class="entity-context">${parts.join(" · ")}</div>`;
+}
+
+function buildConvergenceSection(entities: ConvergenceEntity[]): string {
+  const rows = entities
+    .map((ce) => {
+      const indicators = ce.indicators
+        .map((id) => `<code>${escapeHtml(id)}</code>`)
+        .join(" ");
+      const exposure = `$${ce.totalExposure.toLocaleString()}`;
+      const barWidth = Math.min(100, Math.round((ce.indicators.length / 6) * 100));
+      return `<tr>
+        <td><strong>${escapeHtml(ce.entityName)}</strong></td>
+        <td>${indicators}</td>
+        <td class="num">${ce.indicators.length}</td>
+        <td class="num">${exposure}</td>
+        <td class="num">${ce.findings.length}</td>
+        <td><div class="convergence-bar" style="width: ${barWidth}%"></div></td>
+      </tr>`;
+    })
+    .join("\n");
+
+  return `<section class="section">
+    <h2>Multi-Signal Entities</h2>
+    <p class="section-subtitle">Entities flagged by 2+ independent indicators — strongest investigative leads</p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Entity</th>
+            <th>Indicators</th>
+            <th>#</th>
+            <th>Exposure</th>
+            <th>Findings</th>
+            <th>Convergence</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   </section>`;
 }
 
@@ -690,9 +756,13 @@ function buildStyles(): string {
   .finding-title { font-weight: 500; flex: 1; }
   .finding-stats { display: flex; gap: 16px; font-size: 0.9em; margin-bottom: 12px; flex-wrap: wrap; }
   .finding-stats .stat { white-space: nowrap; }
+  .entity-context { font-size: 0.8em; color: var(--color-text-muted); margin-bottom: 8px; font-style: italic; }
   .five-cs { font-size: 0.9em; line-height: 1.7; }
   .five-c { margin-bottom: 6px; }
   .five-c.recommendation { background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: var(--radius); margin-top: 8px; }
+
+  /* Convergence */
+  .convergence-bar { height: 8px; background: var(--color-primary); border-radius: 4px; min-width: 4px; }
 
   /* Charts */
   .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }

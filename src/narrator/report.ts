@@ -187,11 +187,13 @@ export function assembleReport(data: ReportData): string {
   if (data.materialFindings && data.materialFindings.length > 0) {
     const materialHypIds = new Set<string>();
     for (const finding of data.materialFindings) {
+      // Reconstruct expected hypothesis IDs using the same logic as templates.ts:
+      // H-{indicatorId}-{entityId.slice(0, 8)}
+      const expectedIds = new Set(
+        finding.signals.map((s) => `H-${s.indicatorId}-${s.entityId.slice(0, 8)}`),
+      );
       for (const h of nonExecHypotheses) {
-        const matchesIndicator = h.signalIds.some((sid) => sid === finding.indicatorId);
-        const entitySlug = finding.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, "");
-        const matchesEntity = h.id.includes(entitySlug);
-        if (matchesIndicator && matchesEntity) {
+        if (expectedIds.has(h.id)) {
           materialHypIds.add(h.id);
         }
       }

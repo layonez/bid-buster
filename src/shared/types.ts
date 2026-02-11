@@ -210,6 +210,14 @@ export interface FiveCsStructure {
 
 export type FindingSource = "signal_consolidation" | "investigator_agent";
 
+export interface EntityContext {
+  naicsDescription?: string;
+  setAsideType?: string;
+  totalAwardsInDataset: number;
+  firstAwardDate?: string;
+  lastAwardDate?: string;
+}
+
 export interface MaterialFinding {
   id: string;
   entityName: string;
@@ -224,6 +232,17 @@ export interface MaterialFinding {
   fiveCs?: FiveCsStructure;
   source: FindingSource;
   aiTag?: "RULE" | "AI-ENHANCED" | "AI-DISCOVERED";
+  entityContext?: EntityContext;
+}
+
+// ─── Convergence Analysis Types ──────────────────────────────────────────
+
+export interface ConvergenceEntity {
+  entityName: string;
+  indicators: string[];
+  totalExposure: number;
+  convergenceScore: number;
+  findings: MaterialFinding[];
 }
 
 // ─── Investigation Narrative Types ──────────────────────────────────────────
@@ -256,4 +275,5 @@ export interface DashboardData {
   provenance: Provenance;
   investigationFindings?: InvestigationFindings;
   materialFindings?: MaterialFinding[];
+  convergenceEntities?: ConvergenceEntity[];
 }

@@ -27,8 +27,8 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
   R001: {
     condition: (s, stats) =>
       `${s.entityName} received ${stats.awardCount} competitively solicited awards, ` +
-      `with a single-bid rate of ${(s.value * 100).toFixed(1)}% ` +
-      `(${Math.round(s.value * stats.awardCount)} awards received only one offer).`,
+      `with a single-bid rate of ${s.value.toFixed(1)}% ` +
+      `(${Math.round((s.value / 100) * stats.awardCount)} awards received only one offer).`,
     criteria:
       "FAR 6.101 requires agencies to promote and provide for full and open competition. " +
       "The EU Single Market Scoreboard flags single-bid rates above 20% as a concern indicator.",
@@ -46,7 +46,7 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
 
   R002: {
     condition: (s, stats) =>
-      `${(s.value * 100).toFixed(1)}% of awards (by count) to ${s.entityName} were non-competitive, ` +
+      `${s.value.toFixed(1)}% of awards (by count) to ${s.entityName} were non-competitive, ` +
       `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} awards.`,
     criteria:
       "FAR 6.302 permits non-competitive procurement only under specific circumstances " +
@@ -89,7 +89,7 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
 
   R004: {
     condition: (s, stats) =>
-      `${s.entityName} received ${(s.value * 100).toFixed(1)}% of total spending, ` +
+      `${s.entityName} received ${s.value.toFixed(1)}% of total spending, ` +
       `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} awards.`,
     criteria:
       "The EU Single Market Scoreboard tracks vendor concentration as a key procurement health " +
