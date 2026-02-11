@@ -57,6 +57,7 @@ export async function runInvestigation(
   const collectorResult = await runCollector(
     {
       agency: params.agency,
+      subtierAgency: params.subtierAgency,
       recipient: params.recipient,
       periodStart: params.periodStart,
       periodEnd: params.periodEnd,
@@ -73,10 +74,12 @@ export async function runInvestigation(
   const queryContext: QueryContext = {
     recipientFilter: params.recipient,
     agencyFilter: params.agency,
+    subtierAgencyFilter: params.subtierAgency,
     periodStart: params.periodStart,
     periodEnd: params.periodEnd,
     isRecipientFiltered: !!params.recipient,
-    isAgencyFiltered: !!params.agency,
+    isAgencyFiltered: !!params.agency || !!params.subtierAgency,
+    isSubtierFiltered: !!params.subtierAgency,
   };
 
   // ─── Step 2: Compute Signals ───────────────────────────────────────────
@@ -172,6 +175,7 @@ export async function runInvestigation(
 
   const caseFolder = await createCaseFolder(params.outputDir, undefined, {
     agency: params.agency,
+    subtierAgency: params.subtierAgency,
     recipient: params.recipient,
     fullEvidence: options.fullEvidence,
   });
@@ -183,6 +187,9 @@ export async function runInvestigation(
     transactions: collectorResult.transactions,
     evidenceDir: caseFolder.evidenceDir,
     findings: materialFindings,
+    fullEvidence: options.fullEvidence,
+    summaryEvidenceDir: caseFolder.summaryEvidenceDir,
+    detailEvidenceDir: caseFolder.detailEvidenceDir,
   });
 
   logger.info({ artifacts: evidence.length }, "CSV evidence artifacts produced");
@@ -249,9 +256,10 @@ export async function runInvestigation(
   });
 
   // Build interactive dashboard
+  const agencyLabel = params.subtierAgency ?? params.agency ?? "All Agencies";
   const title = params.recipient
-    ? `${params.agency ?? "All Agencies"} → ${params.recipient}`
-    : params.agency ?? "Investigation";
+    ? `${agencyLabel} → ${params.recipient}`
+    : agencyLabel !== "All Agencies" ? agencyLabel : "Investigation";
 
   const dashboardHtml = buildDashboard({
     title,
@@ -264,6 +272,7 @@ export async function runInvestigation(
     charts,
     provenance,
     investigationFindings,
+    materialFindings,
   });
 
   // ─── Step 8: Verify ───────────────────────────────────────────────────

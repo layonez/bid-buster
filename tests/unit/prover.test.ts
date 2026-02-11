@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { produceEvidence, type ProverInput } from "../../src/prover/analyzer.js";
 import type { NormalizedAward } from "../../src/normalizer/schema.js";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import type { MaterialFinding } from "../../src/shared/types.js";
+import { mkdtemp, readFile, rm, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -191,5 +192,222 @@ describe("Prover Agent", () => {
     const artifacts = await produceEvidence(input);
     const execEvidence = artifacts.filter((a) => a.hypothesisId === "H-EXECUTIVE");
     expect(execEvidence).toHaveLength(0);
+  });
+});
+
+describe("Entity-scoped evidence", () => {
+  let tempDir: string;
+  let summaryDir: string;
+  let detailDir: string;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(join(tmpdir(), "prover-scoped-"));
+    summaryDir = join(tempDir, "summary");
+    detailDir = join(tempDir, "detail");
+    await mkdir(summaryDir, { recursive: true });
+    await mkdir(detailDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  function makeScopedInput(
+    awards: NormalizedAward[],
+    findings: MaterialFinding[],
+    fullEvidence = false,
+  ): ProverInput {
+    return {
+      ...makeInput(awards, tempDir),
+      findings,
+      fullEvidence,
+      summaryEvidenceDir: summaryDir,
+      detailEvidenceDir: detailDir,
+    };
+  }
+
+  it("should scope evidence CSVs to finding's affected awards", async () => {
+    const awards = [
+      makeAward({ awardId: "CONT0001", recipientName: "ACME Corp", extentCompeted: "C" }),
+      makeAward({ awardId: "CONT0002", internalId: "int-002", recipientName: "Other Inc", extentCompeted: "A" }),
+      makeAward({ awardId: "CONT0003", internalId: "int-003", recipientName: "Another LLC", extentCompeted: "C" }),
+    ];
+
+    const findings: MaterialFinding[] = [
+      {
+        id: "F-R002-ACME",
+        entityName: "ACME Corp",
+        indicatorId: "R002",
+        indicatorName: "Non-Competitive Awards",
+        severity: "medium",
+        materialityScore: 100,
+        totalDollarValue: 500_000,
+        signalCount: 1,
+        affectedAwardIds: ["CONT0001"],
+        signals: [{
+          indicatorId: "R002",
+          indicatorName: "Non-Competitive Awards",
+          severity: "medium",
+          entityType: "recipient",
+          entityId: "ACME",
+          entityName: "ACME Corp",
+          value: 80,
+          threshold: 50,
+          context: "80% non-competitive",
+          affectedAwards: ["CONT0001"],
+        }],
+        source: "signal_consolidation",
+      },
+    ];
+
+    const input = makeScopedInput(awards, findings);
+    const artifacts = await produceEvidence(input);
+
+    // Should produce scoped evidence in summary dir
+    expect(artifacts.length).toBeGreaterThan(0);
+    expect(artifacts.every((a) => a.filePath.includes("evidence/summary/"))).toBe(true);
+
+    // The competition breakdown CSV should be scoped to 1 award, not all 3
+    const breakdownArtifact = artifacts.find((a) => a.filePath.includes("competition-breakdown"));
+    expect(breakdownArtifact).toBeDefined();
+    expect(breakdownArtifact!.metadata.totalAwards).toBe(1);
+
+    // Read the CSV and verify row count
+    const csvFile = breakdownArtifact!.filePath.replace("evidence/summary/", "");
+    const content = await readFile(join(summaryDir, csvFile), "utf-8");
+    const dataRows = content.split("\n").filter((l) => l.length > 0).length - 1; // subtract header
+    expect(dataRows).toBe(1); // Only 1 competition code from 1 award
+  });
+
+  it("should not produce master awards-summary in default mode", async () => {
+    const awards = [makeAward()];
+    const findings: MaterialFinding[] = [
+      {
+        id: "F-R002-ACME",
+        entityName: "ACME Corp",
+        indicatorId: "R002",
+        indicatorName: "Non-Competitive Awards",
+        severity: "medium",
+        materialityScore: 100,
+        totalDollarValue: 500_000,
+        signalCount: 1,
+        affectedAwardIds: ["CONT0001"],
+        signals: [{
+          indicatorId: "R002",
+          indicatorName: "Non-Competitive Awards",
+          severity: "medium",
+          entityType: "recipient",
+          entityId: "ACME",
+          entityName: "ACME Corp",
+          value: 80,
+          threshold: 50,
+          context: "80% non-competitive",
+          affectedAwards: ["CONT0001"],
+        }],
+        source: "signal_consolidation",
+      },
+    ];
+
+    const input = makeScopedInput(awards, findings, false);
+    const artifacts = await produceEvidence(input);
+
+    // No master summary in default (non-fullEvidence) mode
+    const summary = artifacts.find((a) => a.id === "E-SUMMARY");
+    expect(summary).toBeUndefined();
+  });
+
+  it("should produce detail evidence when fullEvidence is true", async () => {
+    const awards = [
+      makeAward({ awardId: "CONT0001", extentCompeted: "C" }),
+      makeAward({ awardId: "CONT0002", internalId: "int-002", extentCompeted: "A" }),
+    ];
+
+    const findings: MaterialFinding[] = [
+      {
+        id: "F-R002-ACME",
+        entityName: "ACME Corp",
+        indicatorId: "R002",
+        indicatorName: "Non-Competitive Awards",
+        severity: "medium",
+        materialityScore: 100,
+        totalDollarValue: 500_000,
+        signalCount: 1,
+        affectedAwardIds: ["CONT0001"],
+        signals: [{
+          indicatorId: "R002",
+          indicatorName: "Non-Competitive Awards",
+          severity: "medium",
+          entityType: "recipient",
+          entityId: "ACME",
+          entityName: "ACME Corp",
+          value: 80,
+          threshold: 50,
+          context: "80% non-competitive",
+          affectedAwards: ["CONT0001"],
+        }],
+        source: "signal_consolidation",
+      },
+    ];
+
+    const input = makeScopedInput(awards, findings, true);
+    const artifacts = await produceEvidence(input);
+
+    // Should have both summary and detail artifacts
+    const summaryArtifacts = artifacts.filter((a) => a.filePath.includes("evidence/summary/"));
+    const detailArtifacts = artifacts.filter((a) => a.filePath.includes("evidence/detail/"));
+    expect(summaryArtifacts.length).toBeGreaterThan(0);
+    expect(detailArtifacts.length).toBeGreaterThan(0);
+
+    // Detail should include master awards summary
+    const masterSummary = detailArtifacts.find((a) => a.id === "E-SUMMARY");
+    expect(masterSummary).toBeDefined();
+    expect(masterSummary!.filePath).toBe("evidence/detail/awards-summary.csv");
+
+    // Detail evidence should be unfiltered (all awards)
+    const detailBreakdown = detailArtifacts.find((a) => a.filePath.includes("competition-breakdown"));
+    expect(detailBreakdown).toBeDefined();
+    expect(detailBreakdown!.metadata.totalAwards).toBe(2); // Both awards
+  });
+
+  it("should use full dataset for R004 vendor concentration", async () => {
+    const awards = [
+      makeAward({ awardId: "CONT0001", recipientName: "ACME Corp", awardAmount: 300_000 }),
+      makeAward({ awardId: "CONT0002", internalId: "int-002", recipientName: "Other Inc", awardAmount: 200_000 }),
+    ];
+
+    const findings: MaterialFinding[] = [
+      {
+        id: "F-R004-ACME",
+        entityName: "ACME Corp",
+        indicatorId: "R004",
+        indicatorName: "Vendor Concentration",
+        severity: "high",
+        materialityScore: 200,
+        totalDollarValue: 300_000,
+        signalCount: 1,
+        affectedAwardIds: ["CONT0001"],
+        signals: [{
+          indicatorId: "R004",
+          indicatorName: "Vendor Concentration",
+          severity: "high",
+          entityType: "recipient",
+          entityId: "ACME",
+          entityName: "ACME Corp",
+          value: 60,
+          threshold: 30,
+          context: "60% vendor concentration",
+          affectedAwards: ["CONT0001"],
+        }],
+        source: "signal_consolidation",
+      },
+    ];
+
+    const input = makeScopedInput(awards, findings);
+    const artifacts = await produceEvidence(input);
+
+    // R004 should use all awards for market share context
+    const concentrationArtifact = artifacts.find((a) => a.filePath.includes("vendor-concentration"));
+    expect(concentrationArtifact).toBeDefined();
+    expect(concentrationArtifact!.metadata.vendorCount).toBe(2); // Both vendors, not just ACME
   });
 });

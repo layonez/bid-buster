@@ -25,6 +25,7 @@ const DEFAULT_MATERIALITY_CONFIG: MaterialityConfig = {
   minAwardCount: 1,
   minTotalAmount: 0,
   maxFindings: 20,
+  maxPerIndicator: 5,
 };
 
 // ─── Consolidation ──────────────────────────────────────────────────────────
@@ -122,7 +123,20 @@ export function consolidateSignals(
     });
   }
 
-  // Sort by materiality score descending and take top-N
+  // Sort by materiality score descending
   findings.sort((a, b) => b.materialityScore - a.materialityScore);
-  return findings.slice(0, cfg.maxFindings);
+
+  // Enforce per-indicator diversity cap: no single indicator monopolizes results
+  const indicatorCounts = new Map<string, number>();
+  const diverseFindings: MaterialFinding[] = [];
+
+  for (const finding of findings) {
+    const count = indicatorCounts.get(finding.indicatorId) ?? 0;
+    if (count >= cfg.maxPerIndicator) continue;
+    indicatorCounts.set(finding.indicatorId, count + 1);
+    diverseFindings.push(finding);
+    if (diverseFindings.length >= cfg.maxFindings) break;
+  }
+
+  return diverseFindings;
 }

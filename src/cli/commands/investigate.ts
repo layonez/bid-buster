@@ -12,6 +12,7 @@ import { join } from "node:path";
 export const investigateCommand = new Command("run")
   .description("Run a full investigation pipeline")
   .option("--agency <name>", "Agency name (e.g., 'Department of Defense')")
+  .option("--subtier-agency <name>", "Subtier agency name (e.g., 'Federal Emergency Management Agency')")
   .option("--recipient <name>", "Recipient name or UEI")
   .option(
     "--period <range>",
@@ -31,8 +32,8 @@ export const investigateCommand = new Command("run")
   .option("--full-evidence", "Include full detail evidence CSVs (larger output)", false)
   .option("--open", "Auto-open dashboard.html in browser after completion", false)
   .action(async (options, command) => {
-    if (!options.agency && !options.recipient) {
-      console.error("Error: At least one of --agency or --recipient is required.");
+    if (!options.agency && !options.subtierAgency && !options.recipient) {
+      console.error("Error: At least one of --agency, --subtier-agency, or --recipient is required.");
       process.exit(1);
     }
 
@@ -50,6 +51,7 @@ export const investigateCommand = new Command("run")
     const casePath = await runInvestigation(
       {
         agency: options.agency,
+        subtierAgency: options.subtierAgency,
         recipient: options.recipient,
         periodStart,
         periodEnd,

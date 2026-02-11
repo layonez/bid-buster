@@ -8,6 +8,7 @@ import type { CaseFolder } from "./types.js";
 
 export interface CaseFolderOptions {
   agency?: string;
+  subtierAgency?: string;
   recipient?: string;
   fullEvidence?: boolean;
 }
@@ -26,10 +27,20 @@ function buildCaseFolderName(timestamp: string, options?: CaseFolderOptions): st
       "department of energy": "doe",
       "department of state": "dos",
       "department of health and human services": "hhs",
+      "department of homeland security": "dhs",
       "national aeronautics and space administration": "nasa",
     };
     const lower = options.agency.toLowerCase();
     parts.push(abbrevs[lower] ?? lower.split(/\s+/)[0].slice(0, 8));
+  }
+
+  if (options?.subtierAgency) {
+    // Abbreviate common subtier agencies, otherwise take first word
+    const subtierAbbrevs: Record<string, string> = {
+      "federal emergency management agency": "fema",
+    };
+    const lower = options.subtierAgency.toLowerCase();
+    parts.push(subtierAbbrevs[lower] ?? lower.split(/\s+/)[0].slice(0, 8));
   }
 
   if (options?.recipient) {

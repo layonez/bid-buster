@@ -1,11 +1,17 @@
 /**
  * Interactive HTML dashboard generator.
  * Produces a self-contained single-file dashboard.html with:
- * - Inline JSON data (no external fetches required)
+ * - Truncated inline JSON data (top 50 signals, material-findings-only hypotheses)
  * - Vega-Lite charts rendered client-side via Vega-Embed (CDN)
- * - Signal table, hypothesis cards, evidence links, provenance trail
+ * - Material findings section, signal table, hypothesis cards, evidence links, provenance trail
+ * - Full data available in data/*.json sidecar files
  */
-import type { DashboardData, Signal, Hypothesis, EvidenceArtifact } from "../shared/types.js";
+import type { DashboardData, Signal, Hypothesis, EvidenceArtifact, MaterialFinding } from "../shared/types.js";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const SIGNAL_PAGE_SIZE = 50;
+const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 // ─── HTML Escaping (XSS Prevention) ────────────────────────────────────────
 
@@ -28,11 +34,41 @@ function escapeJsonForScript(obj: unknown): string {
     .replace(/<!--/g, "<\\!--");
 }
 
+// ─── Data Truncation Helpers ────────────────────────────────────────────────
+
+function sortSignalsBySeverity(signals: Signal[]): Signal[] {
+  return [...signals].sort((a, b) =>
+    (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9),
+  );
+}
+
+function getMaterialHypothesisIds(
+  hypotheses: Hypothesis[],
+  materialFindings: MaterialFinding[] | undefined,
+): Set<string> {
+  if (!materialFindings || materialFindings.length === 0) return new Set(hypotheses.map((h) => h.id));
+  const ids = new Set<string>();
+  for (const finding of materialFindings) {
+    for (const h of hypotheses) {
+      if (h.id === "H-EXECUTIVE") continue;
+      // Match by indicator ID in signal IDs and entity name in hypothesis ID
+      const matchesIndicator = h.signalIds.some((sid) => sid === finding.indicatorId);
+      const matchesEntity = h.id.includes(finding.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ""));
+      if (matchesIndicator && matchesEntity) {
+        ids.add(h.id);
+      }
+    }
+  }
+  return ids;
+}
+
 // ─── Dashboard Builder ──────────────────────────────────────────────────────
 
 /**
  * Build a complete self-contained HTML dashboard from investigation data.
  * Opens in any browser — all dependencies loaded from CDN, all data inline.
+ * Data is truncated for size: top 50 signals, material-findings hypotheses only.
+ * Full data is in data/*.json sidecar files.
  */
 export function buildDashboard(data: DashboardData): string {
   const {
@@ -45,14 +81,28 @@ export function buildDashboard(data: DashboardData): string {
     charts,
     provenance,
     investigationFindings,
+    materialFindings,
   } = data;
 
   const awardCount = data.awards.length;
-  const nonExecHypotheses = hypotheses.filter((h) => h.id !== "H-EXECUTIVE");
+  const allNonExec = hypotheses.filter((h) => h.id !== "H-EXECUTIVE");
   const execHypothesis = hypotheses.find((h) => h.id === "H-EXECUTIVE");
   const highCount = signals.filter((s) => s.severity === "high").length;
   const mediumCount = signals.filter((s) => s.severity === "medium").length;
   const lowCount = signals.filter((s) => s.severity === "low").length;
+
+  // Truncate: sort signals by severity, take top 50 for rendering
+  const sortedSignals = sortSignalsBySeverity(signals);
+  const displaySignals = sortedSignals.slice(0, SIGNAL_PAGE_SIZE);
+
+  // Truncate: only hypotheses matching material findings
+  const materialHypIds = getMaterialHypothesisIds(allNonExec, materialFindings);
+  const displayHypotheses = allNonExec.filter((h) => materialHypIds.has(h.id));
+  const truncatedHypotheses = materialFindings && materialFindings.length > 0 && displayHypotheses.length < allNonExec.length;
+
+  // Truncate: only evidence for displayed hypotheses
+  const displayHypIdSet = new Set(displayHypotheses.map((h) => h.id));
+  const displayEvidence = evidence.filter((e) => displayHypIdSet.has(e.hypothesisId));
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -114,7 +164,7 @@ ${buildStyles()}
         <div class="summary-label">Awards Analyzed</div>
       </div>
       <div class="summary-card">
-        <div class="summary-value">${nonExecHypotheses.length}</div>
+        <div class="summary-value">${allNonExec.length}</div>
         <div class="summary-label">Hypotheses</div>
       </div>
     </div>
@@ -122,10 +172,13 @@ ${buildStyles()}
     ${investigationFindings ? `<div class="exec-summary"><strong>Investigator Assessment:</strong> ${escapeHtml(investigationFindings.summary)}</div>` : ""}
   </section>
 
+  <!-- ─── Material Findings ────────────────────────────────────────── -->
+  ${materialFindings && materialFindings.length > 0 ? buildMaterialFindingsSection(materialFindings) : ""}
+
   <!-- ─── Signal Table ───────────────────────────────────────────────── -->
   <section class="section">
     <h2>Signals Detected</h2>
-    ${signals.length > 0 ? buildSignalTable(signals) : '<p class="empty-state">No signals detected.</p>'}
+    ${displaySignals.length > 0 ? buildSignalTable(displaySignals, signals.length) : '<p class="empty-state">No signals detected.</p>'}
   </section>
 
   <!-- ─── Charts ─────────────────────────────────────────────────────── -->
@@ -134,15 +187,16 @@ ${buildStyles()}
   <!-- ─── Hypotheses ─────────────────────────────────────────────────── -->
   <section class="section">
     <h2>Hypotheses &amp; Evidence</h2>
-    ${nonExecHypotheses.length > 0
-      ? nonExecHypotheses.map((h, i) => buildHypothesisCard(h, evidence, i)).join("\n    ")
+    ${truncatedHypotheses ? `<p class="truncation-note">Showing ${displayHypotheses.length} hypotheses matching material findings. ${allNonExec.length} total generated — see <code>data/hypotheses.json</code> for the complete list.</p>` : ""}
+    ${displayHypotheses.length > 0
+      ? displayHypotheses.map((h, i) => buildHypothesisCard(h, displayEvidence, i)).join("\n    ")
       : '<p class="empty-state">No hypotheses generated.</p>'}
   </section>
 
   <!-- ─── Evidence Links ─────────────────────────────────────────────── -->
   <section class="section">
     <h2>Evidence Artifacts</h2>
-    ${evidence.length > 0 ? buildEvidenceTable(evidence) : '<p class="empty-state">No evidence artifacts.</p>'}
+    ${displayEvidence.length > 0 ? buildEvidenceTable(displayEvidence, evidence.length) : '<p class="empty-state">No evidence artifacts.</p>'}
   </section>
 
   <!-- ─── Investigation Details ──────────────────────────────────────── -->
@@ -172,22 +226,26 @@ ${buildStyles()}
   </footer>
 </div>
 
-<!-- ─── Inline Data (lightweight: awards excluded to reduce file size) ── -->
+<!-- ─── Inline Data (truncated for size; full data in data/*.json) ────── -->
 <script>
   window.__DASHBOARD_DATA__ = ${escapeJsonForScript({
     title: data.title,
     generatedAt: data.generatedAt,
     params: data.params,
-    signals: data.signals,
-    hypotheses: data.hypotheses,
-    evidence: data.evidence,
-    charts: data.charts,
+    signals: displaySignals,
+    totalSignalCount: signals.length,
+    hypotheses: displayHypotheses,
+    totalHypothesisCount: allNonExec.length,
+    evidence: displayEvidence.map((e) => ({ id: e.id, hypothesisId: e.hypothesisId, type: e.type, title: e.title, filePath: e.filePath })),
+    totalEvidenceCount: evidence.length,
+    charts: charts.map((c) => ({ id: c.id, title: c.title, description: c.description })),
     provenance: data.provenance,
+    materialFindings: materialFindings ?? [],
     investigationFindings: data.investigationFindings
       ? {
           summary: data.investigationFindings.summary,
           iterations: data.investigationFindings.iterations,
-          toolCallLog: data.investigationFindings.toolCallLog,
+          toolCallCount: data.investigationFindings.toolCallLog.length,
           crossReferences: data.investigationFindings.crossReferences,
           estimatedCostUsd: data.investigationFindings.estimatedCostUsd,
         }
@@ -215,12 +273,48 @@ ${buildChartScripts(charts)}
 
 // ─── Section Builders ───────────────────────────────────────────────────────
 
-function buildSignalTable(signals: Signal[]): string {
-  const PAGE_SIZE = 50;
-  const initialSignals = signals.slice(0, PAGE_SIZE);
-  const hasMore = signals.length > PAGE_SIZE;
+function buildMaterialFindingsSection(findings: MaterialFinding[]): string {
+  const cards = findings.map((f) => {
+    const sevClass = `card-${f.severity}`;
+    const badge = severityBadge(f.severity);
+    const tag = f.aiTag ? `<span class="ai-tag ai-tag-${f.aiTag.toLowerCase().replace(/[^a-z]/g, "")}">${escapeHtml(f.aiTag)}</span>` : "";
+    const exposure = `$${f.totalDollarValue.toLocaleString()}`;
 
-  const rows = initialSignals
+    const fiveCsHtml = f.fiveCs
+      ? `<div class="five-cs">
+          <div class="five-c"><strong>Condition:</strong> ${escapeHtml(f.fiveCs.condition)}</div>
+          <div class="five-c"><strong>Criteria:</strong> ${escapeHtml(f.fiveCs.criteria)}</div>
+          <div class="five-c"><strong>Cause:</strong> ${escapeHtml(f.fiveCs.cause)}</div>
+          <div class="five-c"><strong>Effect:</strong> ${escapeHtml(f.fiveCs.effect)}</div>
+          <div class="five-c recommendation"><strong>Recommendation:</strong> ${escapeHtml(f.fiveCs.recommendation)}</div>
+        </div>`
+      : `<p>${escapeHtml(f.signals[0]?.context ?? "")}</p>`;
+
+    return `<div class="finding-card ${sevClass}">
+      <div class="finding-header">
+        <span class="finding-id">${escapeHtml(f.id)}</span>
+        ${badge}
+        ${tag}
+        <span class="finding-title">${escapeHtml(f.indicatorName)} — ${escapeHtml(f.entityName)}</span>
+      </div>
+      <div class="finding-stats">
+        <span class="stat"><strong>Exposure:</strong> ${exposure}</span>
+        <span class="stat"><strong>Awards:</strong> ${f.affectedAwardIds.length}</span>
+        <span class="stat"><strong>Signals:</strong> ${f.signalCount}</span>
+      </div>
+      ${fiveCsHtml}
+    </div>`;
+  }).join("\n    ");
+
+  return `<section class="section">
+    <h2>Material Findings</h2>
+    <p class="section-subtitle">${findings.length} findings ranked by materiality (dollar exposure × severity × signal count)</p>
+    ${cards}
+  </section>`;
+}
+
+function buildSignalTable(signals: Signal[], totalCount: number): string {
+  const rows = signals
     .map((s, i) => {
       const badge = severityBadge(s.severity);
       return `<tr>
@@ -235,27 +329,8 @@ function buildSignalTable(signals: Signal[]): string {
     })
     .join("\n");
 
-  const hiddenRows = hasMore
-    ? signals.slice(PAGE_SIZE).map((s, i) => {
-        const badge = severityBadge(s.severity);
-        return `<tr class="signal-hidden" style="display:none">
-          <td>${PAGE_SIZE + i + 1}</td>
-          <td>${badge}</td>
-          <td><code>${escapeHtml(s.indicatorId)}</code> ${escapeHtml(s.indicatorName)}</td>
-          <td>${escapeHtml(s.entityName)}</td>
-          <td class="num">${s.value}</td>
-          <td class="num">${s.threshold}</td>
-          <td>${escapeHtml(s.context)}</td>
-        </tr>`;
-      }).join("\n")
-    : "";
-
-  const loadMoreBtn = hasMore
-    ? `<button id="load-more-signals" style="margin-top:12px;padding:8px 16px;cursor:pointer;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg);">Show remaining ${signals.length - PAGE_SIZE} signals</button>
-       <script>document.getElementById('load-more-signals').addEventListener('click', function() {
-         document.querySelectorAll('.signal-hidden').forEach(function(el) { el.style.display = ''; });
-         this.remove();
-       });</script>`
+  const truncationNote = totalCount > signals.length
+    ? `<p class="truncation-note">Showing top ${signals.length} of ${totalCount} signals (sorted by severity). See <code>data/signals.json</code> for the complete list.</p>`
     : "";
 
   return `<div class="table-wrapper">
@@ -271,10 +346,10 @@ function buildSignalTable(signals: Signal[]): string {
           <th>Context</th>
         </tr>
       </thead>
-      <tbody>${rows}${hiddenRows}</tbody>
+      <tbody>${rows}</tbody>
     </table>
   </div>
-  ${loadMoreBtn}`;
+  ${truncationNote}`;
 }
 
 function buildChartsSection(charts: { id: string; title: string; description: string }[]): string {
@@ -334,7 +409,7 @@ function buildHypothesisCard(
     </div>`;
 }
 
-function buildEvidenceTable(evidence: EvidenceArtifact[]): string {
+function buildEvidenceTable(evidence: EvidenceArtifact[], totalCount: number): string {
   const rows = evidence
     .map(
       (e) => `<tr>
@@ -346,6 +421,10 @@ function buildEvidenceTable(evidence: EvidenceArtifact[]): string {
       </tr>`,
     )
     .join("\n");
+
+  const truncationNote = totalCount > evidence.length
+    ? `<p class="truncation-note">Showing ${evidence.length} of ${totalCount} evidence artifacts (matching material findings). See <code>data/evidence-manifest.json</code> for the complete list.</p>`
+    : "";
 
   return `<div class="table-wrapper">
     <table>
@@ -360,7 +439,8 @@ function buildEvidenceTable(evidence: EvidenceArtifact[]): string {
       </thead>
       <tbody>${rows}</tbody>
     </table>
-  </div>`;
+  </div>
+  ${truncationNote}`;
 }
 
 function buildInvestigationSection(findings: NonNullable<DashboardData["investigationFindings"]>): string {
@@ -500,6 +580,7 @@ function buildStyles(): string {
 
   /* Sections */
   .section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .section-subtitle { color: var(--color-text-muted); font-size: 0.9em; margin: -8px 0 16px; }
 
   /* Summary cards */
   .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -511,6 +592,9 @@ function buildStyles(): string {
   .summary-label { font-size: 0.8em; color: var(--color-text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
 
   .exec-summary { background: var(--color-primary-light); padding: 14px 18px; border-radius: var(--radius); margin-top: 12px; line-height: 1.7; white-space: pre-wrap; }
+
+  /* Truncation notes */
+  .truncation-note { color: var(--color-text-muted); font-size: 0.85em; font-style: italic; margin-top: 12px; }
 
   /* Tables */
   .table-wrapper { overflow-x: auto; }
@@ -533,10 +617,30 @@ function buildStyles(): string {
   .type-json { background: #fff3e0; color: #e65100; }
   .type-table { background: #f3e5f5; color: #7b1fa2; }
 
+  /* AI tag badges */
+  .ai-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7em; font-weight: 600; margin-left: 4px; }
+  .ai-tag-rule { background: #e8f5e9; color: #2e7d32; }
+  .ai-tag-aienhanced { background: #e3f2fd; color: #1565c0; }
+  .ai-tag-aidiscovered { background: #fff3e0; color: #e65100; }
+
   /* Impact badges */
   .impact-confirms { color: var(--color-confirms); font-weight: 600; }
   .impact-refutes { color: var(--color-refutes); font-weight: 600; }
   .impact-contextualizes { color: var(--color-contextualizes); font-weight: 600; }
+
+  /* Material Finding cards */
+  .finding-card { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .finding-card.card-high { border-left: 4px solid var(--color-high); background: var(--color-high-bg); }
+  .finding-card.card-medium { border-left: 4px solid var(--color-medium); background: var(--color-medium-bg); }
+  .finding-card.card-low { border-left: 4px solid var(--color-low); background: var(--color-low-bg); }
+  .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .finding-id { font-family: monospace; font-size: 0.85em; color: var(--color-primary); font-weight: 600; }
+  .finding-title { font-weight: 500; flex: 1; }
+  .finding-stats { display: flex; gap: 16px; font-size: 0.9em; margin-bottom: 12px; flex-wrap: wrap; }
+  .finding-stats .stat { white-space: nowrap; }
+  .five-cs { font-size: 0.9em; line-height: 1.7; }
+  .five-c { margin-bottom: 6px; }
+  .five-c.recommendation { background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: var(--radius); margin-top: 8px; }
 
   /* Charts */
   .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }

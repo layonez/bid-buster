@@ -9,6 +9,7 @@ import { runCollector } from "../../collector/index.js";
 export const fetchCommand = new Command("fetch")
   .description("Collect procurement data from USAspending API")
   .requiredOption("--agency <name>", "Agency name or code")
+  .option("--subtier-agency <name>", "Subtier agency name (e.g., 'Federal Emergency Management Agency')")
   .option("--recipient <name>", "Recipient name or UEI")
   .option(
     "--period <range>",
@@ -37,6 +38,7 @@ export const fetchCommand = new Command("fetch")
     const result = await runCollector(
       {
         agency: options.agency,
+        subtierAgency: options.subtierAgency,
         recipient: options.recipient,
         periodStart,
         periodEnd,

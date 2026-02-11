@@ -101,7 +101,7 @@ export class SplittingIndicator extends BaseIndicator {
         entityId: cluster.agency,
         entityName: cluster.agency,
         value: cluster.awardsInBand.length,
-        threshold: this.minClusterSize,
+        threshold: cluster.threshold,
         context:
           `${cluster.awardsInBand.length} awards from ${cluster.agency} to ${cluster.recipient} ` +
           `during ${cluster.period} fall within ${(this.bandWidthPct * 100).toFixed(0)}% below ` +

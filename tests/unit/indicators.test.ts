@@ -141,6 +141,24 @@ describe("R003: SplittingIndicator", () => {
     expect(signals[0].affectedAwards).toHaveLength(4);
   });
 
+  it("should set threshold to dollar value, not cluster size", () => {
+    // 3 awards just below $250K in same quarter
+    for (let i = 0; i < 3; i++) {
+      indicator.fold(
+        makeAward({
+          awardId: `T-00${i}`,
+          awardAmount: 240000 + i * 1000,
+          startDate: "2023-04-15",
+        }),
+      );
+    }
+
+    const signals = indicator.finalize();
+    expect(signals).toHaveLength(1);
+    expect(signals[0].threshold).toBe(250000); // Dollar threshold, not minClusterSize (3)
+    expect(signals[0].value).toBe(3); // Cluster size goes in value
+  });
+
   it("should not flag if below minimum cluster size", () => {
     indicator.fold(
       makeAward({ awardAmount: 245000, startDate: "2023-04-15" }),

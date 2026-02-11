@@ -49,6 +49,7 @@ const MATERIALITY_DEFAULTS = {
   minAwardCount: 1,
   minTotalAmount: 0,
   maxFindings: 20,
+  maxPerIndicator: 5,
 } as const;
 
 const INVESTIGATOR_DEFAULTS = {
@@ -189,6 +190,7 @@ const MaterialitySchema = z.object({
   minAwardCount: z.number().optional(),
   minTotalAmount: z.number().optional(),
   maxFindings: z.number().optional(),
+  maxPerIndicator: z.number().min(1).optional(),
 });
 
 const SignalSchema = z.object({
@@ -240,6 +242,7 @@ export interface AppConfig {
     minAwardCount: number;
     minTotalAmount: number;
     maxFindings: number;
+    maxPerIndicator: number;
   };
   enrichment: {
     samGov: {

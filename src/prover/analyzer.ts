@@ -16,13 +16,29 @@ export interface ProverInput {
   transactions: Map<string, Transaction[]>;
   evidenceDir: string;
   findings?: MaterialFinding[];
+  fullEvidence?: boolean;
+  summaryEvidenceDir?: string;
+  detailEvidenceDir?: string;
 }
 
 /**
  * Produce evidence artifacts (CSV tables + summary JSON) for each hypothesis.
- * Returns a list of EvidenceArtifact references to the files written.
+ * When findings + summaryEvidenceDir are provided, produces entity-scoped evidence
+ * filtered to each finding's affectedAwardIds. Otherwise falls back to legacy
+ * per-hypothesis mode for backward compatibility.
  */
 export async function produceEvidence(input: ProverInput): Promise<EvidenceArtifact[]> {
+  if (input.findings && input.findings.length > 0 && input.summaryEvidenceDir) {
+    return produceScopedEvidence(input);
+  }
+  return produceLegacyEvidence(input);
+}
+
+/**
+ * Legacy mode: produce evidence per hypothesis with full (unfiltered) award data.
+ * Used when no findings are provided (backward compat for existing callers/tests).
+ */
+async function produceLegacyEvidence(input: ProverInput): Promise<EvidenceArtifact[]> {
   const artifacts: EvidenceArtifact[] = [];
 
   for (const hypothesis of input.hypotheses) {
@@ -34,7 +50,6 @@ export async function produceEvidence(input: ProverInput): Promise<EvidenceArtif
 
     if (relatedSignals.length === 0) continue;
 
-    // Determine which indicator this hypothesis is primarily about
     const primaryIndicator = relatedSignals[0].indicatorId;
 
     const produced = await produceEvidenceForIndicator(
@@ -52,6 +67,97 @@ export async function produceEvidence(input: ProverInput): Promise<EvidenceArtif
   // Always produce a master awards summary CSV
   const summaryArtifact = await produceAwardsSummary(input.awards, input.evidenceDir);
   artifacts.push(summaryArtifact);
+
+  return artifacts;
+}
+
+/**
+ * Entity-scoped mode: produce evidence per MaterialFinding, filtered to each
+ * finding's affectedAwardIds. Summary CSVs go to evidence/summary/.
+ * Full detail CSVs + master summary go to evidence/detail/ only when fullEvidence is set.
+ */
+async function produceScopedEvidence(input: ProverInput): Promise<EvidenceArtifact[]> {
+  const artifacts: EvidenceArtifact[] = [];
+  const summaryDir = input.summaryEvidenceDir!;
+
+  // Build index for O(1) award lookup
+  const awardIndex = new Map<string, NormalizedAward>();
+  for (const a of input.awards) {
+    awardIndex.set(a.awardId, a);
+  }
+
+  for (const finding of input.findings!) {
+    const scopedAwards = finding.affectedAwardIds
+      .map((id) => awardIndex.get(id))
+      .filter((a): a is NormalizedAward => a != null);
+
+    if (scopedAwards.length === 0) continue;
+
+    // Create a virtual hypothesis so we can reuse existing evidence functions
+    const virtualHypothesis: Hypothesis = {
+      id: finding.id,
+      signalIds: [finding.indicatorId],
+      question: "",
+      context: "",
+      evidenceNeeded: [],
+      severity: finding.severity,
+    };
+
+    // R004 needs full dataset for market share context; all others use scoped awards
+    const awardsForEvidence = finding.indicatorId === "R004" ? input.awards : scopedAwards;
+
+    const produced = await produceEvidenceForIndicator(
+      finding.indicatorId,
+      virtualHypothesis,
+      finding.signals,
+      awardsForEvidence,
+      input.transactions,
+      summaryDir,
+    );
+
+    // Fix filePaths to reflect summary subdirectory
+    for (const artifact of produced) {
+      artifact.filePath = artifact.filePath.replace(/^evidence\//, "evidence/summary/");
+    }
+
+    artifacts.push(...produced);
+  }
+
+  // Full evidence mode: also produce unfiltered per-hypothesis detail + master summary
+  if (input.fullEvidence && input.detailEvidenceDir) {
+    const detailDir = input.detailEvidenceDir;
+
+    for (const hypothesis of input.hypotheses) {
+      if (hypothesis.id === "H-EXECUTIVE") continue;
+
+      const relatedSignals = input.signalResult.signals.filter((s) =>
+        hypothesis.signalIds.includes(s.indicatorId),
+      );
+
+      if (relatedSignals.length === 0) continue;
+
+      const primaryIndicator = relatedSignals[0].indicatorId;
+      const produced = await produceEvidenceForIndicator(
+        primaryIndicator,
+        hypothesis,
+        relatedSignals,
+        input.awards,
+        input.transactions,
+        detailDir,
+      );
+
+      for (const artifact of produced) {
+        artifact.filePath = artifact.filePath.replace(/^evidence\//, "evidence/detail/");
+      }
+
+      artifacts.push(...produced);
+    }
+
+    // Master awards summary in detail dir
+    const summaryArtifact = await produceAwardsSummary(input.awards, detailDir);
+    summaryArtifact.filePath = summaryArtifact.filePath.replace(/^evidence\//, "evidence/detail/");
+    artifacts.push(summaryArtifact);
+  }
 
   return artifacts;
 }

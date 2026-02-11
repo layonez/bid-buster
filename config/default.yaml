@@ -61,6 +61,7 @@ materiality:
   minAwardCount: 1                 # Minimum affected awards for a finding
   minTotalAmount: 0                # Minimum dollar value for a finding
   maxFindings: 20                  # Maximum material findings to report
+  maxPerIndicator: 5               # Max findings per indicator type (diversity cap)
 
 # ── Multi-Source Enrichment ──────────────────────────────────────────────────
 

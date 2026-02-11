@@ -144,4 +144,48 @@ describe("consolidateSignals", () => {
     expect(findings[0].source).toBe("signal_consolidation");
     expect(findings[0].aiTag).toBe("RULE");
   });
+
+  it("enforces per-indicator diversity cap", () => {
+    // Create 10 R006 signals (high dollar) and 3 R002 signals (lower dollar)
+    const signals: Signal[] = [];
+    const awards: NormalizedAward[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      signals.push(
+        makeSignal({
+          entityName: `OUTLIER-${i}`,
+          entityId: `O-${i}`,
+          indicatorId: "R006",
+          indicatorName: "Price Outliers",
+          severity: "high",
+          affectedAwards: [`R6-${i}`],
+        }),
+      );
+      awards.push(makeAward({ awardId: `R6-${i}`, awardAmount: 50_000_000 + i }));
+    }
+
+    for (let i = 0; i < 3; i++) {
+      signals.push(
+        makeSignal({
+          entityName: `NONCOMP-${i}`,
+          entityId: `NC-${i}`,
+          indicatorId: "R002",
+          indicatorName: "Non-Competitive Awards",
+          severity: "medium",
+          affectedAwards: [`R2-${i}`],
+        }),
+      );
+      awards.push(makeAward({ awardId: `R2-${i}`, awardAmount: 100_000 }));
+    }
+
+    const findings = consolidateSignals(signals, awards, { maxFindings: 10, maxPerIndicator: 5 });
+
+    // R006 should be capped at 5 even though it has 10 high-dollar findings
+    const r006Count = findings.filter((f) => f.indicatorId === "R006").length;
+    const r002Count = findings.filter((f) => f.indicatorId === "R002").length;
+
+    expect(r006Count).toBeLessThanOrEqual(5);
+    expect(r002Count).toBe(3); // All 3 R002 findings should appear
+    expect(findings.length).toBe(8); // 5 R006 + 3 R002
+  });
 });

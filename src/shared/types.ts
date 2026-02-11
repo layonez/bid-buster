@@ -97,16 +97,19 @@ export interface CaseFolder {
 export interface QueryContext {
   recipientFilter?: string;
   agencyFilter?: string;
+  subtierAgencyFilter?: string;
   periodStart: string;
   periodEnd: string;
   isRecipientFiltered: boolean;
   isAgencyFiltered: boolean;
+  isSubtierFiltered?: boolean;
 }
 
 // ─── Investigation Context ───────────────────────────────────────────────────
 
 export interface InvestigationParams {
   agency?: string;
+  subtierAgency?: string;
   recipient?: string;
   periodStart: string;
   periodEnd: string;
@@ -194,6 +197,7 @@ export interface MaterialityConfig {
   minAwardCount: number;
   minTotalAmount: number;
   maxFindings: number;
+  maxPerIndicator: number;
 }
 
 export interface FiveCsStructure {
@@ -251,4 +255,5 @@ export interface DashboardData {
   charts: ChartArtifact[];
   provenance: Provenance;
   investigationFindings?: InvestigationFindings;
+  materialFindings?: MaterialFinding[];
 }

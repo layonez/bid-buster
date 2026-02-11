@@ -136,19 +136,31 @@ export function assembleReport(data: ReportData): string {
   }
   lines.push("");
 
-  // ─── Signals (appendix-style: collapsible for large counts) ───────────
+  // ─── Signals (truncated for large counts) ────────────────────────────
   lines.push("## Signals Detected");
   lines.push("");
 
-  if (signalResult.signals.length > 50) {
-    lines.push(`<details><summary>Show all ${signalResult.signals.length} signals</summary>`);
+  const SIGNAL_TRUNCATION_THRESHOLD = 100;
+  const SIGNAL_DISPLAY_LIMIT = 20;
+  const allSignals = signalResult.signals;
+  const severityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+  const truncateSignals = allSignals.length > SIGNAL_TRUNCATION_THRESHOLD;
+  const displaySignals = truncateSignals
+    ? [...allSignals].sort((a, b) => (severityOrder[a.severity] ?? 9) - (severityOrder[b.severity] ?? 9)).slice(0, SIGNAL_DISPLAY_LIMIT)
+    : allSignals;
+
+  if (truncateSignals) {
+    lines.push(`*${allSignals.length} signals detected. Showing top ${SIGNAL_DISPLAY_LIMIT} by severity. See \`data/signals.json\` for the full list.*`);
+    lines.push("");
+  } else if (allSignals.length > 50) {
+    lines.push(`<details><summary>Show all ${allSignals.length} signals</summary>`);
     lines.push("");
   }
 
   lines.push("| # | Indicator | Severity | Entity | Value | Context |");
   lines.push("|---|-----------|----------|--------|-------|---------|");
 
-  signalResult.signals.forEach((signal, i) => {
+  displaySignals.forEach((signal, i) => {
     const sev =
       signal.severity === "high" ? "**HIGH**" :
       signal.severity === "medium" ? "MEDIUM" : "LOW";
@@ -159,7 +171,7 @@ export function assembleReport(data: ReportData): string {
     );
   });
 
-  if (signalResult.signals.length > 50) {
+  if (!truncateSignals && allSignals.length > 50) {
     lines.push("</details>");
   }
   lines.push("");
@@ -169,7 +181,29 @@ export function assembleReport(data: ReportData): string {
   lines.push("");
 
   const nonExecHypotheses = hypotheses.filter((h) => h.id !== "H-EXECUTIVE");
-  for (const hypothesis of nonExecHypotheses) {
+
+  // When material findings exist, only show hypotheses matching them
+  let displayHypotheses = nonExecHypotheses;
+  if (data.materialFindings && data.materialFindings.length > 0) {
+    const materialHypIds = new Set<string>();
+    for (const finding of data.materialFindings) {
+      for (const h of nonExecHypotheses) {
+        const matchesIndicator = h.signalIds.some((sid) => sid === finding.indicatorId);
+        const entitySlug = finding.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const matchesEntity = h.id.includes(entitySlug);
+        if (matchesIndicator && matchesEntity) {
+          materialHypIds.add(h.id);
+        }
+      }
+    }
+    displayHypotheses = nonExecHypotheses.filter((h) => materialHypIds.has(h.id));
+    if (displayHypotheses.length < nonExecHypotheses.length) {
+      lines.push(`*${nonExecHypotheses.length} hypotheses generated. Showing ${displayHypotheses.length} matching material findings. Full list in \`data/hypotheses.json\`.*`);
+      lines.push("");
+    }
+  }
+
+  for (const hypothesis of displayHypotheses) {
     lines.push(`### ${hypothesis.id}: ${hypothesis.question}`);
     lines.push("");
     lines.push(`**Severity:** ${hypothesis.severity}`);

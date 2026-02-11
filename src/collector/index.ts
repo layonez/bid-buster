@@ -14,6 +14,7 @@ import { mkdir } from "node:fs/promises";
 
 export interface CollectorParams {
   agency?: string;
+  subtierAgency?: string;
   recipient?: string;
   periodStart: string;
   periodEnd: string;
@@ -28,6 +29,28 @@ export interface CollectorResult {
   transactions: Map<string, Transaction[]>;
   raw: CollectionResult;
   snapshotDir: string;
+}
+
+/**
+ * Build USAspending search filters from collector params.
+ * Exported for testing.
+ */
+export function buildSearchFilters(params: CollectorParams): AwardSearchFilters {
+  const filters: AwardSearchFilters = {
+    award_type_codes: params.awardTypeCodes,
+    time_period: [{ start_date: params.periodStart, end_date: params.periodEnd }],
+  };
+
+  if (params.subtierAgency) {
+    filters.agencies = [{ type: "awarding", tier: "subtier", name: params.subtierAgency }];
+  } else if (params.agency) {
+    filters.agencies = [{ type: "awarding", tier: "toptier", name: params.agency }];
+  }
+  if (params.recipient) {
+    filters.recipient_search_text = [params.recipient];
+  }
+
+  return filters;
 }
 
 export async function runCollector(
@@ -45,18 +68,7 @@ export async function runCollector(
     logger,
   });
 
-  // Build filters
-  const filters: AwardSearchFilters = {
-    award_type_codes: params.awardTypeCodes,
-    time_period: [{ start_date: params.periodStart, end_date: params.periodEnd }],
-  };
-
-  if (params.agency) {
-    filters.agencies = [{ type: "awarding", tier: "toptier", name: params.agency }];
-  }
-  if (params.recipient) {
-    filters.recipient_search_text = [params.recipient];
-  }
+  const filters = buildSearchFilters(params);
 
   // Collect
   const raw = await client.collect(filters, {
