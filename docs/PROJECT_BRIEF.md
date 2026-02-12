@@ -6,135 +6,152 @@
 
 ## Problem Statement
 
-Public procurement represents **one-third of government spending** globally and roughly **12% of GDP** in OECD countries. Identifying integrity risks in this data currently requires deep institutional knowledge, access to expensive proprietary tools, and familiarity with audit methodologies from the OECD, World Bank, and Open Contracting Partnership.
+Public procurement represents **one-third of government spending** globally and roughly **12% of GDP** in OECD countries. Identifying integrity risks in this data currently requires deep institutional knowledge, access to expensive proprietary tools ($50K+/year), and familiarity with audit methodologies from the OECD, World Bank, and Open Contracting Partnership.
 
 **Procurement Investigator** breaks these barriers. It packages decades of anti-corruption methodology into a single command-line tool that anyone -- journalists, civil society watchdogs, oversight offices, or concerned citizens -- can run against publicly available data to produce a professional-grade integrity screening report.
 
-**Hackathon alignment:** Problem Statement Two -- *"Break the Barriers"* -- take something powerful that's locked behind expertise and put it in everyone's hands.
+**Hackathon alignment:** Problem Statement Two -- *"Break the Barriers"* -- take something powerful that's locked behind expertise, cost, and infrastructure and put it in everyone's hands.
 
 ---
 
 ## What It Does
 
-```
-investigate --agency="Department of Defense" \
-            --recipient="ACME Corp" \
-            --period=2020-01-01:2024-12-31
+```bash
+investigate run \
+  --subtier-agency="Federal Emergency Management Agency" \
+  --period=2020-01-01:2020-12-31 \
+  --deep --charts
 ```
 
 One command. The tool:
 
-1. **Collects** award data from the USAspending API (pagination, caching, snapshots)
-2. **Computes** 6 red-flag indicators based on recognised integrity methodologies
-3. **Generates** plain-language hypotheses (non-accusatory, OECD-aligned)
-4. **Produces** evidence artifacts (statistical tables, distribution charts)
-5. **Verifies** every claim in the report is backed by evidence
-6. **Assembles** a complete case folder ready for human review
+1. **Collects** award data from the USAspending API (pagination, caching, detail enrichment)
+2. **Signals** 6 red-flag indicators based on OCP/OECD methodology (fold/finalize pattern)
+3. **Consolidates** 1,465 raw signals into 16 material findings (dollar-weighted materiality, per-indicator caps)
+4. **Investigates** autonomously via Claude Opus 4.6 agent with 8 tools (SAM.gov, sanctions screening, reasoning trace)
+5. **Hypothesizes** non-accusatory questions with Five C's audit structure (GAO Yellow Book)
+6. **Proves** every finding with entity-scoped CSV evidence + Vega-Lite SVG charts
+7. **Enhances** per-hypothesis narrative via Claude Sonnet 4.5
+8. **Reports** README.md executive briefing + case.md + interactive dashboard + investigation narrative
+9. **Verifies** every claim against computed evidence with tautology detection
 
-Output:
+Output (5.0 MB, git-committable):
 ```
-case-2024-02-10/
-├── case.md           # Narrative report with footnoted evidence links
-├── evidence/         # Charts, tables, CSV extracts
-├── queries/          # Raw API payloads and responses
-├── analysis/         # Reproducible analysis scripts
-└── provenance.json   # Full audit trail (timestamps, versions, hashes)
+cases/fema-{date}/
+├── README.md                   Executive briefing (top findings in plain English)
+├── case.md                     Full report (<50 KB, inverted pyramid)
+├── dashboard.html              Interactive dashboard (277 KB)
+├── investigation-narrative.md  Agent reasoning trace (--deep only)
+├── provenance.json             Full audit trail (git commit, timestamps, hashes)
+├── data/                       Machine-readable JSON (signals, findings, verification)
+└── evidence/
+    ├── summary/                Entity-scoped CSV evidence tables
+    ├── charts/                 SVG visualizations (4 chart types)
+    └── detail/                 Complete per-entity CSVs (--full-evidence)
 ```
 
 Every finding links to its underlying data. Every run is reproducible. The entire case folder is git-committable.
 
 ---
 
-## How It Uses Claude Opus 4.6
+## Real-World Validation: FEMA COVID-19
 
-The tool is architected as **6 specialised agents** orchestrated in a pipeline:
+We pointed the tool at FEMA's 2020 pandemic procurement -- **7,259 contracts, zero prior knowledge of any vendor.** The system independently flagged:
 
-| Agent | Role | Opus 4.6 Capability |
-|-------|------|---------------------|
-| **Collector** | Data ingestion, pagination, caching | -- (deterministic) |
-| **Signaler** | Compute red-flag indicators | -- (deterministic) |
-| **Hypothesis Maker** | Convert signals into questions | Long-context reasoning over full dataset; structured output; ethical tone calibration |
-| **Prover** | Generate evidence artifacts | Code generation for statistical analysis; multi-step reasoning |
-| **Verifier** | Cross-check claims vs evidence | Verification and self-correction; structured output |
-| **Narrator** | Assemble final report | Long-context synthesis; non-accusatory narrative with citations |
+| Vendor | Amount | What Was Found |
+|--------|--------|---------------|
+| **Parkdale Mills** | $532M | Convergence: vendor concentration + price outlier |
+| **Hanesbrands** | $175M | Convergence: concentration + price outlier |
+| **3M Company** | $96M | Price outlier in safety equipment |
+| **GDIT** | $97M | Vendor concentration in IT services |
 
-**Key model capabilities demonstrated:**
-- **Multi-agent orchestration** -- 6 agents with distinct roles and handoffs
-- **Long-context processing** -- feeding hundreds of award records with full detail into analysis
-- **Structured output** -- typed JSON signals, hypotheses, verification results
-- **Self-verification** -- the Verifier catches unsupported claims and triggers revision
-- **Ethical reasoning** -- maintaining non-accusatory framing per OECD/OCP guidance
-- **Reproducibility** -- every AI-generated artifact includes its prompt, model version, and parameters
+Several of these vendors were later subjects of congressional inquiries and Inspector General investigations. Fillakit LLC -- a company formed 6 days before receiving a $10.16M contract for test tubes, which later shipped unusable soda bottles -- is flagged by R001 (single-bid) in the portfolio scan.
 
 ---
 
-## Red-Flag Indicators (MVP)
+## How It Uses Claude Models
 
-Six indicators implementable end-to-end with USAspending data, grounded in the Open Contracting Partnership's catalogue of 73 recognised indicators:
+The tool integrates AI at **three tiers**, each using the right model for the job:
 
-| # | Indicator | What It Detects | Data Source |
-|---|-----------|-----------------|-------------|
-| R001 | **Single-Bid Competition** | Open tenders with only 1 bidder (restricted competition) | `number_of_offers_received` from award detail |
+### Tier 1: Investigative Agent (Claude Opus 4.6) -- `--deep` flag
+
+Autonomous tool-calling agent that runs up to 10 iterations with **8 specialized tools**:
+
+| Tool | Purpose |
+|------|---------|
+| `log_reasoning` | Externalize thinking into transparent reasoning trace |
+| `create_finding` | Register novel Five C's structured findings |
+| `verify_entity` | SAM.gov entity verification + exclusion screening |
+| `screen_sanctions` | OpenSanctions PEP/sanctions fuzzy matching |
+| `fetch_comparable_awards` | In-memory comparative analysis against peer groups |
+| `get_award_detail` | Deep dive into specific award competition data |
+| `get_subawards` | Sub-award data for pass-through detection |
+| `summarize_investigation` | Produce final investigation narrative |
+
+**FEMA demo:** 8 iterations, 35 tool calls, $4.15. The agent's reasoning is fully transparent -- every thought, hypothesis, and dead end recorded via `log_reasoning` and rendered as `investigation-narrative.md`.
+
+### Tier 2: Narrative Enhancement (Claude Sonnet 4.5)
+
+Per-hypothesis narrative enrichment + AI executive assessment for the briefing. Cost-efficient: ~$0.10 for 14 hypotheses.
+
+### Tier 3: Template Fallback (no AI, $0)
+
+All signal detection, evidence generation, and verification is **deterministic** -- works without any API key via `--no-ai`. The AI enhances but is not required.
+
+**Key model capabilities demonstrated:**
+- **Autonomous tool-calling agent** -- Opus 4.6 with 8 domain-specific tools, cost budgeting, iteration limits
+- **Multi-model architecture** -- Opus for complex reasoning, Sonnet for cost-efficient enrichment, templates as fallback
+- **Transparent reasoning** -- `log_reasoning` externalizes the agent's investigation process into a readable narrative
+- **Self-verification** -- Verifier agent cross-checks every claim against computed evidence
+- **Ethical reasoning** -- non-accusatory framing enforced structurally in templates, system prompts, and verification
+- **Graceful degradation** -- three tiers ($4 / $0.10 / $0) ensure the tool is accessible at any budget
+
+---
+
+## Red-Flag Indicators
+
+Six indicators grounded in the Open Contracting Partnership's catalogue of 73 recognised indicators:
+
+| ID | Indicator | What It Detects | Data Source |
+|----|-----------|-----------------|-------------|
+| R001 | **Single-Bid Competition** | Open tenders with only 1 bidder | `number_of_offers_received` from award detail |
 | R002 | **Non-Competitive Awards** | Awards bypassing open competition | `extent_competed` codes B, C, G, NDO |
-| R003 | **Contract Splitting** | Clusters of awards just below regulatory thresholds | Award amounts near $250K grouped by agency/recipient/period |
+| R003 | **Contract Splitting** | Clusters of awards just below regulatory thresholds | Award amounts near $250K/$7.5M by agency/recipient/period |
 | R004 | **Vendor Concentration** | One supplier dominating an agency's spend | Recipient share of total agency contract value |
 | R005 | **Excessive Modifications** | Contracts ballooning post-award | Modification count and cost growth via transaction history |
-| R006 | **Price Outliers** | Abnormally expensive awards vs. peers | Cross-category comparison using NAICS/PSC codes |
+| R006 | **Price Outliers** | Abnormally expensive awards vs. peers | IQR/z-score outlier detection by NAICS/PSC code |
 
 Each indicator is:
-- **Configurable** -- thresholds, time windows, and minimum coverage set via `config.yaml`
+- **Configurable** -- thresholds, time windows, and minimum coverage set via `config/default.yaml`
 - **Transparent** -- outputs the threshold used, data coverage, and group sizes alongside each signal
 - **Non-accusatory** -- framed as screening prompts, not proof of wrongdoing
+- **Filter-aware** -- `QueryContext` suppresses tautological signals (e.g., R004 when filtering by recipient)
 
-**Future indicators** (require additional data): beneficial ownership conflicts, collusive bidding patterns, tender timing manipulation, and more from the full OCP catalogue.
+### Signal Consolidation
+
+Raw signals are consolidated into material findings via dollar-weighted materiality scoring with per-indicator caps (max 5 each) and convergence analysis (entities flagged by 2+ independent indicators). FEMA demo: 1,465 signals -> 16 material findings (92x reduction).
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLI (commander)                       │
-│  investigate --agency=X --period=Y --recipient=Z --output=.  │
-└──────────┬──────────────────────────────────────────────────┘
-           │
-     ┌─────▼──────┐
-     │ Orchestrator│  Sequential pipeline with shared context
-     └─────┬──────┘
-           │
-  ┌────────▼─────────┐    ┌──────────────────┐
-  │  1. Collector     │───▶│  USAspending API  │
-  │  (fetch + cache)  │    │  SAM.gov (future) │
-  └────────┬─────────┘    └──────────────────┘
-           │
-  ┌────────▼─────────┐
-  │  2. Normalizer    │  Raw JSON → canonical schema (zod-validated)
-  └────────┬─────────┘
-           │
-  ┌────────▼─────────┐
-  │  3. Signaler      │  6 indicators × fold/finalize pattern
-  └────────┬─────────┘
-           │
-  ┌────────▼─────────┐
-  │  4. Hypothesis    │  Templates + Claude Opus 4.6 refinement
-  │     Maker         │
-  └────────┬─────────┘
-           │
-  ┌────────▼─────────┐
-  │  5. Prover        │  Statistical analysis → charts + tables
-  └────────┬─────────┘
-           │
-  ┌────────▼─────────┐
-  │  6. Verifier      │  Claim ↔ evidence cross-check
-  └────────┬─────────┘
-           │
-  ┌────────▼─────────┐
-  │  7. Narrator      │  Assemble case.md with footnotes
-  └────────┬─────────┘
-           │
-           ▼
-     case-{date}/
+investigate run [--agency] [--subtier-agency] [--recipient] --period [--deep] [--charts]
+
+  Step 1:    COLLECT        USAspending API -> paginate -> cache -> normalize
+                            -> Construct QueryContext from params
+  Step 2:    SIGNAL         6 indicators x fold/finalize -> signal table
+  Step 2.5:  CONSOLIDATE    Group signals -> materiality scoring -> top-N findings
+  Step 3:    INVESTIGATE    Opus 4.6 agent (8 tools, reasoning trace) [--deep]
+  Step 3.5:  CONVERGENCE    Multi-signal correlation (entities flagged by 2+ indicators)
+  Step 4:    HYPOTHESIZE    Templates + agent findings -> non-accusatory questions
+  Step 5:    PROVE          CSV evidence + Vega-Lite SVG charts -> evidence/
+  Step 6:    ENHANCE        Sonnet 4.5 per-hypothesis narrative enrichment
+  Step 7:    REPORT         README.md + case.md + dashboard.html + narrative
+  Step 8:    VERIFY         Claim-evidence cross-check + tautology detection
 ```
+
+**12 source modules** with clear separation of concerns: `cli/`, `collector/`, `normalizer/`, `signaler/`, `enrichment/`, `investigator/`, `hypothesis/`, `prover/`, `narrator/`, `verifier/`, `orchestrator/`, `shared/`.
 
 ---
 
@@ -144,94 +161,63 @@ Each indicator is:
 |---------|--------|-----|
 | Language | TypeScript (strict, ESM) | Type safety, modern ecosystem |
 | Runtime | Node.js 20+ | LTS, native fetch |
+| AI | `@anthropic-ai/sdk` | Claude Opus 4.6 + Sonnet 4.5, graceful fallback |
 | CLI | `commander` | Most popular, excellent TS types |
 | Validation | `zod` | Runtime schema validation for API data and config |
 | HTTP | Native `fetch` + `p-retry` + `p-throttle` | Lightweight; backoff + rate limiting |
-| Config | `cosmiconfig` | Automatic config file discovery |
 | Statistics | `simple-statistics` | Quartile/percentile calculations for indicators |
-| AI | `@anthropic-ai/sdk` | Claude API for hypothesis generation and narration |
-| Charts | `vega-lite` + `vl-convert` | Reproducible specs, SVG/PNG export |
+| Charts | `vega` + `vega-lite` | Reproducible SVG specs, server-side rendering |
+| Config | `cosmiconfig` | Automatic config file discovery |
 | Testing | `vitest` | Fast, native ESM + TypeScript |
 | Logging | `pino` | Structured JSON, low overhead |
 
 ---
 
-## Project Stages
+## Project Metrics
 
-### Stage 1: POC (Proof of Concept)
-
-**Goal:** Demonstrate the core loop works end-to-end with real data.
-
-**Scope:**
-- Fetch a small slice of USAspending data (single agency + recipient, ~50 awards)
-- Compute 2-3 indicators (single-bid, non-competitive, vendor concentration)
-- Generate a basic signal table and text-based hypothesis output
-- Manual report assembly to validate the concept
-
-**Deliverable:** Script that fetches data, computes signals, and prints findings to stdout.
-
-**Success criteria:** Real red-flag signals detected from real USAspending data.
+| Metric | Value |
+|--------|-------|
+| TypeScript source | 47 files, ~9,865 lines |
+| Tests | 128 across 13 files, all passing in < 1 second |
+| TypeScript strict mode | Zero errors |
+| FEMA demo output | 5.0 MB (git-committable) |
+| Output size optimization | 99.1% reduction (543 MB -> 5.0 MB) |
+| Signal reduction | 92x (1,465 signals -> 16 material findings) |
+| Verification | 36/36 claims verified (100%) |
 
 ---
 
-### Stage 2: MVP (Minimum Viable Product)
+## Data Sources
 
-**Goal:** A polished, installable CLI tool that produces complete case folders.
+### Primary: USAspending API
 
-**Scope:**
-- Full Collector with pagination, caching, snapshots, and detail enrichment
-- All 6 MVP indicators with configurable thresholds
-- Template-based hypothesis generation + Claude API narrative enhancement
-- Evidence generation (Vega-Lite charts, statistical tables, CSV extracts)
-- Verifier ensuring claim-evidence traceability
-- Narrator assembling `case.md` with footnotes and disclaimers
-- `provenance.json` for full reproducibility
-- Unit tests for all indicators
+**Source:** [USAspending.gov](https://www.usaspending.gov) -- no authentication required.
 
-**Deliverable:** `npx investigate --agency=X --period=Y` producing a complete case folder.
-
-**Success criteria:** A compelling case folder for DoD procurement that a journalist or auditor would find genuinely useful.
-
----
-
-### Stage 3: Enhancement (Post-Hackathon)
-
-**Goal:** Expand data sources, indicators, and output formats.
-
-**Scope:**
-- SAM.gov Entity Management API integration (entity verification, business type enrichment)
-- OpenSanctions screening (sanctions lists, PEP matching)
-- Additional indicators from OCP's 73-indicator catalogue
-- OCDS data format support (international procurement datasets)
-- Interactive web dashboard (evidence explorer)
-- Bulk download support for large-scale analysis
-- Beneficial ownership integration (BODS format)
-
----
-
-## Data Source
-
-**USAspending API** (https://api.usaspending.gov) -- no authentication required.
-
-| Endpoint | Purpose | Key Fields for Red Flags |
-|----------|---------|--------------------------|
+| Endpoint | Purpose | Key Fields |
+|----------|---------|------------|
 | `/search/spending_by_award/` | Primary award search | Award ID, amount, recipient, agency, dates, NAICS, PSC |
-| `/awards/{id}/` | Individual award detail | **Competition data**: offers received, extent competed, pricing type, solicitation procedures |
-| `/transactions/` | Modification history | Action type, modification number, obligation change, dates |
-| `/search/spending_by_category/recipient/` | Aggregate analytics | Recipient share of agency spend |
-| `/search/spending_over_time/` | Time series | Trend detection |
+| `/awards/{id}/` | Individual award detail | Competition data: offers received, extent competed, pricing type |
+| `/transactions/` | Modification history | Action type, modification number, obligation change |
+| `/subawards/` | Sub-award data | Sub-awardee, amount, pass-through detection |
 
-**MVP data slice:** Department of Defense → MIT, FY2020-2024 (~500 awards). Chosen for manageable volume and low reputational risk.
+### Enrichment (--deep mode)
+
+| Source | Purpose | Auth |
+|--------|---------|------|
+| **SAM.gov** | Entity verification, exclusion/debarment screening | Free API key |
+| **OpenSanctions** | Sanctions/PEP fuzzy screening | Free trial key |
+| **Sub-Awards** | Pass-through detection via USAspending | None required |
 
 ---
 
 ## Ethical Framework
 
-- **Screening, not accusation.** Every report opens with a disclaimer: red flags are prompts for further review, not proof of wrongdoing (per OECD 2025 guidelines).
-- **Non-accusatory language.** Hypotheses use question form: *"Are contract amounts unusually concentrated?"* not *"This agency is corrupt."*
-- **Data quality transparency.** Reports note coverage gaps, missing fields, and minimum sample sizes before raising indicators.
-- **Public data only.** No FOUO or sensitive-level API access. No personal data in reports.
-- **Reproducibility.** Every claim links to evidence. Every run produces `provenance.json`.
+- **Screening, not accusation.** Every report opens with a disclaimer: red flags are prompts for further review, not proof of wrongdoing.
+- **Non-accusatory language.** Hypotheses use question form, enforced structurally in templates and AI system prompts.
+- **Self-verifying.** The Verifier agent rejects reports with unsupported claims. Tautology detection catches structural bias.
+- **Data quality transparency.** Reports note coverage gaps, missing fields, and minimum sample sizes.
+- **Public data only.** No FOUO or sensitive-level API access.
+- **Reproducibility.** Every claim links to evidence. Every run produces `provenance.json` with full audit trail.
 
 ---
 
@@ -239,25 +225,28 @@ Each indicator is:
 
 1. **Investigation-as-Code:** The entire audit methodology is codified, version-controlled, and reproducible -- not locked in a PDF manual or institutional knowledge.
 
-2. **AI-powered but evidence-grounded:** Claude Opus 4.6 generates hypotheses and narratives, but every claim must pass verification against computed evidence. The AI amplifies human judgment without replacing it.
+2. **AI amplifies, doesn't replace:** Claude Opus 4.6 investigates autonomously, but every claim must pass verification against computed evidence. The core value works at $0 with `--no-ai`.
 
-3. **Multi-agent architecture:** Six specialised agents with distinct roles mirror how a real investigation team operates -- but automated and consistent.
+3. **Multi-signal convergence:** When multiple independent indicators flag the same entity, that's a meaningful signal. Parkdale was flagged by both R004 (concentration) AND R006 (price outlier) independently.
 
-4. **Self-verifying:** The Verifier agent rejects reports with unsupported claims. This is a built-in quality gate most AI tools lack.
+4. **Transparent reasoning:** The `log_reasoning` tool externalizes the agent's thinking into a readable investigation narrative. Users see the process, not just conclusions.
 
-5. **Open methodology:** Red-flag indicators are drawn from recognised frameworks (OCP, OECD, World Bank) with configurable thresholds -- not black-box scoring.
+5. **Self-verifying:** Built-in quality gate that most AI tools lack. The Verifier agent rejects unsupported claims.
+
+6. **Open methodology:** Indicators drawn from recognised frameworks (OCP, OECD, GAO) with configurable thresholds -- not black-box scoring.
 
 ---
 
 ## References
 
-- Open Contracting Partnership, *Red Flags in Public Procurement* (2024) -- 73 indicators catalogue
-- OECD, *Guidelines for Fighting Bid Rigging in Public Procurement* (2025 Update)
-- OCP Cardinal library -- open-source red-flag computation
-- USAspending API -- public federal spending data
-- SAM.gov Entity Management API -- entity verification
-- OpenSanctions -- global sanctions and PEP database
+- [Open Contracting Partnership, *Red Flags in Public Procurement* (2024)](https://www.open-contracting.org/resources/red-flags-in-public-procurement/) -- 73 indicators catalogue
+- [OECD, *Guidelines for Fighting Bid Rigging in Public Procurement* (2025)](https://www.oecd.org/en/publications/2025/09/)
+- [GAO Yellow Book (Government Auditing Standards)](https://www.gao.gov/yellowbook) -- Five C's finding structure
+- [GAO Report GAO-20-632](https://www.gao.gov/assets/gao-20-632.pdf) -- GAO's COVID-19 contracting analysis
+- [USAspending API](https://api.usaspending.gov) -- Public federal spending data
+- [OCP Cardinal Library](https://github.com/open-contracting/cardinal-rs) -- fold/finalize pattern inspiration
+- [OpenSanctions](https://www.opensanctions.org/) -- Global sanctions and PEP database
 
 ---
 
-*Open source. TypeScript. Built for Anthropic's Hackathon 2025.*
+*Open source. TypeScript. MIT License. Built for Anthropic's Hackathon 2025.*
