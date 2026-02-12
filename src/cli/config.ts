@@ -21,7 +21,7 @@ const CACHE_DEFAULTS = {
 
 const AI_DEFAULTS = {
   enabled: true,
-  model: "claude-opus-4-6-20250219",
+  model: "claude-opus-4-6",
 } as const;
 
 const ENRICHMENT_DEFAULTS = {
@@ -54,7 +54,7 @@ const MATERIALITY_DEFAULTS = {
 
 const INVESTIGATOR_DEFAULTS = {
   enabled: true,
-  model: "claude-opus-4-6-20250219",
+  model: "claude-opus-4-6",
   maxIterations: 10,
   maxTokensPerTurn: 4096,
   maxCostUsd: 2.0,

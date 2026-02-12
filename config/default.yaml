@@ -13,7 +13,7 @@ cache:
 
 ai:
   enabled: true
-  model: "claude-opus-4-6-20250219"
+  model: "claude-sonnet-4-5-20250929"
 
 signals:
   R001_single_bid:
@@ -86,7 +86,7 @@ enrichment:
 
 investigator:
   enabled: true
-  model: "claude-opus-4-6-20250219"
+  model: "claude-opus-4-6"
   maxIterations: 10              # Max reasoning loops before forced stop
   maxTokensPerTurn: 4096         # Agent needs room to reason
   maxCostUsd: 2.00               # Safety cap on estimated API cost

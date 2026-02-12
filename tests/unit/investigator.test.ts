@@ -243,7 +243,7 @@ describe("Investigative Agent", () => {
     awards: sampleAwards,
     config: {
       enabled: true,
-      model: "claude-opus-4-6-20250219",
+      model: "claude-opus-4-6",
       maxIterations: 10,
       maxTokensPerTurn: 4096,
       maxCostUsd: 2.0,
@@ -369,7 +369,7 @@ describe("Response Parsing (via agent integration)", () => {
       awards: [],
       config: {
         enabled: false,
-        model: "claude-opus-4-6-20250219",
+        model: "claude-opus-4-6",
         maxIterations: 10,
         maxTokensPerTurn: 4096,
         maxCostUsd: 2.0,
