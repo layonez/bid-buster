@@ -100,9 +100,23 @@ function buildEntityContext(
   awardMap: Map<string, NormalizedAward>,
   allAwards: NormalizedAward[],
 ): EntityContext {
+  // Determine recipient name for dataset-wide lookups.
+  // For indicators like R006 where entityName is an award ID (not a recipient),
+  // resolve the actual recipient from affected awards.
+  let recipientForLookup = entityName;
+  const matchesByRecipient = allAwards.filter((a) => a.recipientName === entityName);
+  if (matchesByRecipient.length === 0) {
+    const firstAffected = affectedAwardIds
+      .map((id) => awardMap.get(id))
+      .find((a): a is NormalizedAward => a !== undefined);
+    if (firstAffected) {
+      recipientForLookup = firstAffected.recipientName;
+    }
+  }
+
   // Count total awards for this entity across the whole dataset
   const totalAwardsInDataset = allAwards.filter(
-    (a) => a.recipientName === entityName,
+    (a) => a.recipientName === recipientForLookup,
   ).length;
 
   // Get affected awards for metadata extraction
@@ -135,7 +149,7 @@ function buildEntityContext(
   }
 
   // Date range from all awards to this entity
-  const entityAwards = allAwards.filter((a) => a.recipientName === entityName);
+  const entityAwards = allAwards.filter((a) => a.recipientName === recipientForLookup);
   const dates = entityAwards
     .map((a) => a.startDate)
     .filter(Boolean)
@@ -273,6 +287,24 @@ export function consolidateSignals(
   return diverseFindings;
 }
 
+// ─── Entity Name Normalization ───────────────────────────────────────────────
+
+/**
+ * Normalize entity names for convergence grouping.
+ * R006 signals use "awardId (recipientName)" format while other indicators
+ * use the recipient name directly. Extract the recipient name from the
+ * parenthetical so convergence can match across indicator types.
+ */
+function normalizeEntityNameForConvergence(entityName: string): string {
+  // R006 pattern: "70FB7020F00000080 (PARKDALE ADVANCED MATERIALS, INC.)"
+  // Award IDs are alphanumeric/dash tokens without spaces
+  const match = entityName.match(/^[\w-]+ \((.+)\)$/);
+  if (match) {
+    return match[1].trim();
+  }
+  return entityName;
+}
+
 // ─── Convergence Analysis ───────────────────────────────────────────────────
 
 /**
@@ -283,12 +315,13 @@ export function consolidateSignals(
 export function computeConvergence(
   findings: MaterialFinding[],
 ): ConvergenceEntity[] {
-  // Group findings by entity name
+  // Group findings by normalized entity name (handles R006 "awardId (name)" format)
   const entityGroups = new Map<string, MaterialFinding[]>();
   for (const finding of findings) {
-    const existing = entityGroups.get(finding.entityName) ?? [];
+    const normalizedName = normalizeEntityNameForConvergence(finding.entityName);
+    const existing = entityGroups.get(normalizedName) ?? [];
     existing.push(finding);
-    entityGroups.set(finding.entityName, existing);
+    entityGroups.set(normalizedName, existing);
   }
 
   const convergenceEntities: ConvergenceEntity[] = [];

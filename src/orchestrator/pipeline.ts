@@ -74,7 +74,7 @@ export async function runInvestigation(
   // ─── Construct QueryContext ───────────────────────────────────────────
   const queryContext: QueryContext = {
     recipientFilter: params.recipient,
-    agencyFilter: params.agency,
+    agencyFilter: params.agency ?? params.subtierAgency,
     subtierAgencyFilter: params.subtierAgency,
     periodStart: params.periodStart,
     periodEnd: params.periodEnd,
@@ -224,20 +224,14 @@ export async function runInvestigation(
   logger.info(`Step 6/${totalSteps}: Enhancing narrative...`);
 
   // Filter to material-finding-linked hypotheses only (cost-efficient: ~11 vs 613)
-  const materialIndicatorEntities = new Set(
-    materialFindings.map((f) => `${f.indicatorId}::${f.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, "")}`),
-  );
-  const materialHypotheses = hypotheses.filter((h) => {
-    if (h.id === "H-EXECUTIVE") return true;
-    return h.signalIds.some((sid) =>
-      materialIndicatorEntities.has(
-        `${sid}::${h.id.replace(/^H-[A-Z0-9]+-/, "").slice(0, 10)}`,
-      ),
-    ) || materialFindings.some((f) =>
-      h.signalIds.includes(f.indicatorId) &&
-      h.id.includes(f.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, "")),
-    );
-  });
+  // Reconstruct expected hypothesis IDs from finding signals: H-{indicatorId}-{entityId.slice(0,8)}
+  const materialHypIds = new Set<string>(["H-EXECUTIVE"]);
+  for (const finding of materialFindings) {
+    for (const s of finding.signals) {
+      materialHypIds.add(`H-${s.indicatorId}-${s.entityId.slice(0, 8)}`);
+    }
+  }
+  const materialHypotheses = hypotheses.filter((h) => materialHypIds.has(h.id));
 
   logger.info(
     { total: hypotheses.length, material: materialHypotheses.length },
@@ -356,6 +350,7 @@ export async function runInvestigation(
     aiNarrative,
     awardUrlMap,
     convergenceEntities,
+    hasDeepInvestigation: !!investigationFindings,
   });
   await writeFile(join(caseFolder.path, "README.md"), briefing, "utf-8");
 

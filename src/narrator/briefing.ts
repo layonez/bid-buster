@@ -27,6 +27,8 @@ export interface BriefingInput {
   awardUrlMap?: Map<string, string>;
   /** Entities flagged by 2+ independent indicators. */
   convergenceEntities?: ConvergenceEntity[];
+  /** Whether the --deep investigative agent was run. */
+  hasDeepInvestigation?: boolean;
 }
 
 /**
@@ -120,9 +122,10 @@ export function generateBriefing(input: BriefingInput): string {
   const lines: string[] = [];
 
   // ─── Title ─────────────────────────────────────────────────────────────
+  const agencyLabel = params.subtierAgency ?? params.agency ?? "All Agencies";
   const title = params.recipient
-    ? `${params.agency ?? "All Agencies"} → ${params.recipient}`
-    : params.agency ?? "Investigation";
+    ? `${agencyLabel} → ${params.recipient}`
+    : agencyLabel !== "All Agencies" ? agencyLabel : "Investigation";
 
   lines.push(`# Procurement Investigation: ${title}`);
   lines.push("");
@@ -208,7 +211,7 @@ export function generateBriefing(input: BriefingInput): string {
         const contextParts: string[] = [];
         if (ctx.naicsDescription) contextParts.push(`Industry: ${ctx.naicsDescription}`);
         if (ctx.setAsideType) contextParts.push(`Set-aside: ${ctx.setAsideType}`);
-        contextParts.push(`${ctx.totalAwardsInDataset} awards in dataset`);
+        contextParts.push(`${ctx.totalAwardsInDataset} ${ctx.totalAwardsInDataset === 1 ? "award" : "awards"} in dataset`);
         if (ctx.firstAwardDate && ctx.lastAwardDate) {
           contextParts.push(`active ${ctx.firstAwardDate} to ${ctx.lastAwardDate}`);
         }
@@ -219,7 +222,7 @@ export function generateBriefing(input: BriefingInput): string {
       // Award count + value with USAspending links
       const awardLinks = formatAwardLinks(finding.affectedAwardIds, awardUrlMap);
       lines.push(
-        `*${finding.affectedAwardIds.length} awards, ` +
+        `*${finding.affectedAwardIds.length} ${finding.affectedAwardIds.length === 1 ? "award" : "awards"}, ` +
         `$${finding.totalDollarValue.toLocaleString()} total value*`,
       );
       if (awardLinks) {
@@ -243,7 +246,7 @@ export function generateBriefing(input: BriefingInput): string {
   // ─── Next Steps ────────────────────────────────────────────────────────
   lines.push("## Next Steps");
   lines.push("");
-  lines.push(generateNextSteps(findings, params, queryContext));
+  lines.push(generateNextSteps(findings, params, queryContext, input.hasDeepInvestigation));
   lines.push("");
 
   // ─── Files in this folder ──────────────────────────────────────────────
@@ -299,6 +302,7 @@ function generateNextSteps(
   findings: MaterialFinding[],
   params: InvestigationParams,
   queryContext?: QueryContext,
+  hasDeepInvestigation?: boolean,
 ): string {
   const steps: string[] = [];
 
@@ -331,8 +335,10 @@ function generateNextSteps(
     steps.push(`- Add \`--recipient\` to focus on a specific entity`);
   }
 
-  // Deep investigation
-  steps.push(`- Run with \`--deep\` to enable Opus 4.6 investigative agent`);
+  // Deep investigation (only suggest if not already run)
+  if (!hasDeepInvestigation) {
+    steps.push(`- Run with \`--deep\` to enable Opus 4.6 investigative agent`);
+  }
 
   if (steps.length === 0) {
     return "No specific follow-up actions identified. The dataset appears within normal parameters.";

@@ -88,7 +88,7 @@ export class NonCompetitiveIndicator extends BaseIndicator {
         value: Math.round(rate * 1000) / 10,
         threshold: 50, // 50% as reference
         context:
-          `${stats.nonCompetedCount} of ${stats.totalCount} awards ` +
+          `${stats.nonCompetedCount} of ${stats.totalCount} ${stats.totalCount === 1 ? "award" : "awards"} ` +
           `(${(rate * 100).toFixed(1)}%) to ${stats.recipientName} were non-competitive. ` +
           `Non-competed amount: $${stats.totalNonCompetedAmount.toLocaleString()} ` +
           `(${(amountRate * 100).toFixed(1)}% of total).`,

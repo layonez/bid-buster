@@ -50,12 +50,14 @@ function getMaterialHypothesisIds(
   if (!materialFindings || materialFindings.length === 0) return new Set(hypotheses.map((h) => h.id));
   const ids = new Set<string>();
   for (const finding of materialFindings) {
+    // Reconstruct expected hypothesis IDs using the same logic as templates.ts:
+    // H-{indicatorId}-{entityId.slice(0, 8)}
+    const expectedIds = new Set(
+      finding.signals.map((s) => `H-${s.indicatorId}-${s.entityId.slice(0, 8)}`),
+    );
     for (const h of hypotheses) {
       if (h.id === "H-EXECUTIVE") continue;
-      // Match by indicator ID in signal IDs and entity name in hypothesis ID
-      const matchesIndicator = h.signalIds.some((sid) => sid === finding.indicatorId);
-      const matchesEntity = h.id.includes(finding.entityName.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, ""));
-      if (matchesIndicator && matchesEntity) {
+      if (expectedIds.has(h.id)) {
         ids.add(h.id);
       }
     }
@@ -102,9 +104,26 @@ export function buildDashboard(data: DashboardData): string {
   const displayHypotheses = allNonExec.filter((h) => materialHypIds.has(h.id));
   const truncatedHypotheses = materialFindings && materialFindings.length > 0 && displayHypotheses.length < allNonExec.length;
 
-  // Truncate: only evidence for displayed hypotheses
+  // Truncate: only evidence for displayed hypotheses.
+  // Evidence may use finding IDs (F-R006-...) as hypothesisId when produced from
+  // scoped findings. Map displayed hypotheses back to their finding IDs.
   const displayHypIdSet = new Set(displayHypotheses.map((h) => h.id));
-  const displayEvidence = evidence.filter((e) => displayHypIdSet.has(e.hypothesisId));
+  const matchingFindingIds = new Set<string>();
+  if (materialFindings && materialFindings.length > 0) {
+    for (const finding of materialFindings) {
+      const expectedHypIds = new Set(
+        finding.signals.map((s) => `H-${s.indicatorId}-${s.entityId.slice(0, 8)}`),
+      );
+      for (const h of displayHypotheses) {
+        if (expectedHypIds.has(h.id)) {
+          matchingFindingIds.add(finding.id);
+        }
+      }
+    }
+  }
+  const displayEvidence = evidence.filter((e) =>
+    displayHypIdSet.has(e.hypothesisId) || matchingFindingIds.has(e.hypothesisId),
+  );
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -343,7 +362,7 @@ function buildEntityContextHtml(ctx: NonNullable<MaterialFinding["entityContext"
   const parts: string[] = [];
   if (ctx.naicsDescription) parts.push(escapeHtml(ctx.naicsDescription));
   if (ctx.setAsideType) parts.push(`Set-aside: ${escapeHtml(ctx.setAsideType)}`);
-  parts.push(`${ctx.totalAwardsInDataset} awards in dataset`);
+  parts.push(`${ctx.totalAwardsInDataset} ${ctx.totalAwardsInDataset === 1 ? "award" : "awards"} in dataset`);
   if (ctx.firstAwardDate && ctx.lastAwardDate) {
     parts.push(`active ${escapeHtml(ctx.firstAwardDate)} to ${escapeHtml(ctx.lastAwardDate)}`);
   }

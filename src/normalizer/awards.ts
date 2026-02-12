@@ -48,7 +48,9 @@ export function enrichWithDetail(
     extentCompetedDescription:
       contract?.extent_competed_description ?? undefined,
     numberOfOffersReceived:
-      contract?.number_of_offers_received ?? undefined,
+      contract?.number_of_offers_received != null
+        ? Number(contract.number_of_offers_received)
+        : undefined,
     solicitationProcedures:
       contract?.solicitation_procedures ?? undefined,
     otherThanFullAndOpen:

@@ -124,7 +124,7 @@ export interface AwardDetailResponse {
   latest_transaction_contract_data?: {
     extent_competed?: string;
     extent_competed_description?: string;
-    number_of_offers_received?: number | null;
+    number_of_offers_received?: string | number | null;
     solicitation_procedures?: string;
     solicitation_procedures_description?: string;
     other_than_full_and_open?: string;

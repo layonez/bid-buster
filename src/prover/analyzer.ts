@@ -103,8 +103,22 @@ async function produceScopedEvidence(input: ProverInput): Promise<EvidenceArtifa
       severity: finding.severity,
     };
 
-    // R004 needs full dataset for market share context; R006 needs full NAICS peer group
-    const awardsForEvidence = (finding.indicatorId === "R004" || finding.indicatorId === "R006") ? input.awards : scopedAwards;
+    // R004 needs full dataset for market share context
+    // R006 needs NAICS peer group (not the full dataset — scope to matching NAICS codes)
+    let awardsForEvidence: NormalizedAward[];
+    if (finding.indicatorId === "R004") {
+      awardsForEvidence = input.awards;
+    } else if (finding.indicatorId === "R006") {
+      // Scope to NAICS peer group: only awards sharing a NAICS code with flagged awards
+      const naicsCodes = new Set(
+        scopedAwards.map((a) => a.naicsCode).filter((c): c is string => c != null),
+      );
+      awardsForEvidence = naicsCodes.size > 0
+        ? input.awards.filter((a) => a.naicsCode != null && naicsCodes.has(a.naicsCode))
+        : scopedAwards;
+    } else {
+      awardsForEvidence = scopedAwards;
+    }
 
     const produced = await produceEvidenceForIndicator(
       finding.indicatorId,

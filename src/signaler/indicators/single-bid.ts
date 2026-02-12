@@ -69,7 +69,8 @@ export class SingleBidIndicator extends BaseIndicator {
     const stats = this.byAgency.get(agency)!;
     stats.totalCompeted++;
 
-    if (award.numberOfOffersReceived === 1) {
+    // Coerce to number: API may return string "1" instead of number 1
+    if (Number(award.numberOfOffersReceived) === 1) {
       stats.singleBid++;
       stats.singleBidAwards.push(award.awardId);
     }

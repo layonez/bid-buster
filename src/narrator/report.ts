@@ -31,9 +31,10 @@ export function assembleReport(data: ReportData): string {
   const { params, signalResult, hypotheses, provenance } = data;
 
   // ─── Header ────────────────────────────────────────────────────────────
+  const agencyLabel = params.subtierAgency ?? params.agency ?? "All Agencies";
   const title = params.recipient
-    ? `${params.agency ?? "All Agencies"} → ${params.recipient}`
-    : params.agency ?? "Investigation";
+    ? `${agencyLabel} → ${params.recipient}`
+    : agencyLabel !== "All Agencies" ? agencyLabel : "Investigation";
 
   lines.push(`# Investigation Case File: ${title}`);
   lines.push(`## Period: ${params.periodStart} to ${params.periodEnd}`);
@@ -205,6 +206,22 @@ export function assembleReport(data: ReportData): string {
     }
   }
 
+  // Build hypothesis ID → finding ID mapping for evidence linking.
+  // Evidence produced from scoped findings uses finding IDs as hypothesisId.
+  const hypToFindingIds = new Map<string, Set<string>>();
+  if (data.materialFindings) {
+    for (const finding of data.materialFindings) {
+      const expectedHypIds = new Set(
+        finding.signals.map((s) => `H-${s.indicatorId}-${s.entityId.slice(0, 8)}`),
+      );
+      for (const hid of expectedHypIds) {
+        const existing = hypToFindingIds.get(hid) ?? new Set();
+        existing.add(finding.id);
+        hypToFindingIds.set(hid, existing);
+      }
+    }
+  }
+
   for (const hypothesis of displayHypotheses) {
     lines.push(`### ${hypothesis.id}: ${hypothesis.question}`);
     lines.push("");
@@ -223,9 +240,10 @@ export function assembleReport(data: ReportData): string {
       lines.push("");
     }
 
-    // Link evidence artifacts for this hypothesis
+    // Link evidence artifacts for this hypothesis (match by hypothesis ID or finding ID)
+    const findingIds = hypToFindingIds.get(hypothesis.id);
     const relatedEvidence = data.evidence.filter(
-      (e) => e.hypothesisId === hypothesis.id,
+      (e) => e.hypothesisId === hypothesis.id || (findingIds?.has(e.hypothesisId) ?? false),
     );
     if (relatedEvidence.length > 0) {
       lines.push("**Supporting evidence:**");

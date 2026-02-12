@@ -103,7 +103,7 @@ export class SplittingIndicator extends BaseIndicator {
         value: cluster.awardsInBand.length,
         threshold: cluster.threshold,
         context:
-          `${cluster.awardsInBand.length} awards from ${cluster.agency} to ${cluster.recipient} ` +
+          `${cluster.awardsInBand.length} ${cluster.awardsInBand.length === 1 ? "award" : "awards"} from ${cluster.agency} to ${cluster.recipient} ` +
           `during ${cluster.period} fall within ${(this.bandWidthPct * 100).toFixed(0)}% below ` +
           `the $${cluster.threshold.toLocaleString()} threshold ` +
           `(avg: $${avgAmount.toLocaleString()}).`,

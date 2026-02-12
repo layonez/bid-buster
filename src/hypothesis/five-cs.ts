@@ -8,6 +8,12 @@
 import type { Signal, FiveCsStructure } from "../shared/types.js";
 import type { NormalizedAward } from "../normalizer/schema.js";
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function pluralAward(n: number): string {
+  return n === 1 ? "award" : "awards";
+}
+
 // ─── Per-Indicator Templates ────────────────────────────────────────────────
 
 interface FiveCsTemplate {
@@ -26,9 +32,9 @@ interface EntityStats {
 const TEMPLATES: Record<string, FiveCsTemplate> = {
   R001: {
     condition: (s, stats) =>
-      `${s.entityName} received ${stats.awardCount} competitively solicited awards, ` +
+      `${s.entityName} received ${stats.awardCount} competitively solicited ${pluralAward(stats.awardCount)}, ` +
       `with a single-bid rate of ${s.value.toFixed(1)}% ` +
-      `(${Math.round((s.value / 100) * stats.awardCount)} awards received only one offer).`,
+      `(${Math.round((s.value / 100) * stats.awardCount)} ${pluralAward(Math.round((s.value / 100) * stats.awardCount))} received only one offer).`,
     criteria:
       "FAR 6.101 requires agencies to promote and provide for full and open competition. " +
       "The EU Single Market Scoreboard flags single-bid rates above 20% as a concern indicator.",
@@ -47,7 +53,7 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
   R002: {
     condition: (s, stats) =>
       `${s.value.toFixed(1)}% of awards (by count) to ${s.entityName} were non-competitive, ` +
-      `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} awards.`,
+      `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} ${pluralAward(stats.awardCount)}.`,
     criteria:
       "FAR 6.302 permits non-competitive procurement only under specific circumstances " +
       "(sole source, urgency, national security). OECD Guidelines (2025) flag persistent " +
@@ -68,7 +74,7 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
 
   R003: {
     condition: (s, stats) =>
-      `${stats.awardCount} awards to ${s.entityName} were valued within 10% below the ` +
+      `${stats.awardCount} ${pluralAward(stats.awardCount)} to ${s.entityName} were valued within 10% below the ` +
       `$${s.threshold.toLocaleString()} threshold, suggesting possible structuring.`,
     criteria:
       "FAR 13.003 (Simplified Acquisition Threshold at $250,000) and other regulatory " +
@@ -90,7 +96,7 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
   R004: {
     condition: (s, stats) =>
       `${s.entityName} received ${s.value.toFixed(1)}% of total spending, ` +
-      `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} awards.`,
+      `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} ${pluralAward(stats.awardCount)}.`,
     criteria:
       "The EU Single Market Scoreboard tracks vendor concentration as a key procurement health " +
       "indicator. Vendor shares exceeding 30% warrant review for market diversity. " +
