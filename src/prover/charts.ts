@@ -94,7 +94,7 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
     const artifact = await buildAndRender(
       "top-vendors",
       buildTopVendorsSpec(awards, width, height),
-      "Top Vendors by Dollar Value",
+      "Who Got the Money?",
       "Top 15 vendors ranked by total award amount, color-coded by competition status.",
       [],
       signals.map((s) => s.indicatorId),
@@ -108,7 +108,7 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
     const artifact = await buildAndRender(
       "competition-analysis",
       buildCompetitionAnalysisSpec(awards, width, height),
-      "Competition Analysis",
+      "How Competitive Was the Spending?",
       "Breakdown of awards by competition type: count vs. dollar value.",
       [],
       ["R001", "R002"].filter((id) => signals.some((s) => s.indicatorId === id)),
@@ -122,7 +122,7 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
     const artifact = await buildAndRender(
       "award-timeline",
       buildAwardTimelineSpec(awards, width, height),
-      "Award Timeline",
+      "When Did the Money Flow?",
       "Monthly award spending, segmented by competition status.",
       [],
       signals.map((s) => s.indicatorId),
@@ -136,7 +136,7 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
     const artifact = await buildAndRender(
       "findings-exposure",
       buildFindingsExposureSpec(materialFindings, width, height),
-      "Material Findings by Dollar Exposure",
+      "What Should Be Investigated?",
       "Top findings ranked by dollar exposure, color-coded by indicator type.",
       materialFindings.map((f) => f.id),
       [...new Set(materialFindings.map((f) => f.indicatorId))],

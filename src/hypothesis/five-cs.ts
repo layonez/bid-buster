@@ -52,7 +52,7 @@ const TEMPLATES: Record<string, FiveCsTemplate> = {
 
   R002: {
     condition: (s, stats) =>
-      `${s.value.toFixed(1)}% of awards (by count) to ${s.entityName} were non-competitive, ` +
+      `${s.value.toFixed(1)}% of ${stats.awardCount === 1 ? "the award" : "awards"} (by count) to ${s.entityName} ${stats.awardCount === 1 ? "was" : "were"} non-competitive, ` +
       `totaling $${stats.totalAmount.toLocaleString()} across ${stats.awardCount} ${pluralAward(stats.awardCount)}.`,
     criteria:
       "FAR 6.302 permits non-competitive procurement only under specific circumstances " +

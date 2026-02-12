@@ -188,10 +188,16 @@ ${buildStyles()}
         <div class="summary-value">${allNonExec.length}</div>
         <div class="summary-label">Hypotheses</div>
       </div>
-      ${data.verification ? `<div class="summary-card ${data.verification.passed ? "card-verified" : "card-high"}">
-        <div class="summary-value">${data.verification.supported}/${data.verification.totalClaims}</div>
-        <div class="summary-label">${data.verification.passed ? "Claims Verified" : "Verification Issues"}</div>
-      </div>` : ""}
+      ${data.verification ? (() => {
+        const v = data.verification;
+        const passRate = v.totalClaims > 0 ? v.supported / v.totalClaims : 1;
+        const cardClass = v.passed ? "card-verified" : passRate > 0.9 ? "card-medium" : "card-high";
+        const label = v.passed ? "Claims Verified" : v.unsupported <= 3 ? `${v.supported} Verified (${v.unsupported} minor)` : "Verification Issues";
+        return `<div class="summary-card ${cardClass}">
+        <div class="summary-value">${v.supported}/${v.totalClaims}</div>
+        <div class="summary-label">${label}</div>
+      </div>`;
+      })() : ""}
     </div>
     ${execHypothesis ? `<div class="exec-summary">${escapeHtml(execHypothesis.context)}</div>` : ""}
     ${investigationFindings ? `<div class="exec-summary"><strong>Investigator Assessment:</strong> ${escapeHtml(investigationFindings.summary)}</div>` : ""}
