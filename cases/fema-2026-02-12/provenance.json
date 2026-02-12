@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-02-12T19:23:11.994Z",
+  "toolVersion": "0.1.0",
+  "gitCommit": "38fbf3ac5688989a28a230e36db64909bcc62474",
+  "nodeVersion": "v20.19.4",
+  "parameters": {
+    "subtierAgency": "Federal Emergency Management Agency",
+    "periodStart": "2020-03-01",
+    "periodEnd": "2020-12-31",
+    "outputDir": "./cases",
+    "awardTypeCodes": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  },
+  "dataSources": [
+    {
+      "name": "USAspending API",
+      "endpoint": "https://api.usaspending.gov/api/v2",
+      "snapshotDate": "2026-02-12",
+      "recordCount": 7259,
+      "cacheHit": true
+    }
+  ],
+  "fileHashes": {
+    "signals.json": "d32e695b2a28616b13b890ac2ea1bca743e5cebd8f63101935876a4999b43125",
+    "findings.json": "7d4a159332af32be153f54f3db15b85c57b8df85b5edbb6f7db4230780349c1a"
+  }
+}

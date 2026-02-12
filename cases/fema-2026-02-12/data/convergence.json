@@ -1,0 +1,202 @@
+[
+  {
+    "entityName": "PARKDALE ADVANCED MATERIALS, INC.",
+    "indicators": [
+      "R002",
+      "R006"
+    ],
+    "totalExposure": 1075565421.04,
+    "convergenceScore": 104766996.9330759,
+    "findings": [
+      {
+        "id": "F-R002-PARKD-ADVAN-NONCOMP",
+        "entityName": "PARKDALE ADVANCED MATERIALS, INC.",
+        "indicatorId": "R002",
+        "indicatorName": "Non-Competitive Awards",
+        "severity": "high",
+        "materialityScore": 26205377.389248915,
+        "totalDollarValue": 543407710.52,
+        "signalCount": 1,
+        "affectedAwardIds": [
+          "70FB7020F00000080",
+          "70FB7020F00000083"
+        ],
+        "signals": [
+          {
+            "indicatorId": "R002",
+            "indicatorName": "Non-Competitive Awards",
+            "severity": "high",
+            "entityType": "recipient",
+            "entityId": "PARKDALE ADVANCED MATERIALS, INC.",
+            "entityName": "PARKDALE ADVANCED MATERIALS, INC.",
+            "value": 100,
+            "threshold": 50,
+            "context": "2 of 2 awards (100.0%) to PARKDALE ADVANCED MATERIALS, INC. were non-competitive. Non-competed amount: $543,407,710.52 (100.0% of total).",
+            "affectedAwards": [
+              "70FB7020F00000080",
+              "70FB7020F00000083"
+            ]
+          }
+        ],
+        "fiveCs": {
+          "condition": "100.0% of awards (by count) to PARKDALE ADVANCED MATERIALS, INC. were non-competitive, totaling $543,407,710.52 across 2 awards.",
+          "criteria": "FAR 6.302 permits non-competitive procurement only under specific circumstances (sole source, urgency, national security). OECD Guidelines (2025) flag persistent non-competitive patterns as a procurement integrity indicator.",
+          "cause": "Non-competitive awards may reflect unique capabilities (e.g., FFRDC, UARC status), legitimate sole-source justifications, or habitual use of non-competitive mechanisms without adequate market research.",
+          "effect": "$543,407,710.52 in awards bypassed competition. While individual justifications may be valid, the cumulative pattern reduces the transparency and competitiveness of the procurement portfolio.",
+          "recommendation": "Verify sole-source justifications (J&A documentation) for the largest non-competitive awards. Check entity type via SAM.gov (FFRDC/UARC status may explain the pattern). Consider whether market research could identify additional qualified sources."
+        },
+        "source": "signal_consolidation",
+        "aiTag": "RULE",
+        "entityContext": {
+          "naicsDescription": "MEDICAL, DENTAL, AND HOSPITAL EQUIPMENT AND SUPPLIES MERCHANT WHOLESALERS",
+          "totalAwardsInDataset": 2,
+          "firstAwardDate": "2020-04-23",
+          "lastAwardDate": "2020-05-02"
+        }
+      },
+      {
+        "id": "F-R006-70FB7-PARKD-OUTLIER",
+        "entityName": "70FB7020F00000080 (PARKDALE ADVANCED MATERIALS, INC.)",
+        "indicatorId": "R006",
+        "indicatorName": "Price Outliers",
+        "severity": "high",
+        "materialityScore": 26178121.077289034,
+        "totalDollarValue": 532157710.52,
+        "signalCount": 1,
+        "affectedAwardIds": [
+          "70FB7020F00000080"
+        ],
+        "signals": [
+          {
+            "indicatorId": "R006",
+            "indicatorName": "Price Outliers",
+            "severity": "high",
+            "entityType": "award",
+            "entityId": "70FB7020F00000080",
+            "entityName": "70FB7020F00000080 (PARKDALE ADVANCED MATERIALS, INC.)",
+            "value": 56.8,
+            "threshold": 2650022,
+            "context": "Award 70FB7020F00000080 ($532,157,710.52) to PARKDALE ADVANCED MATERIALS, INC. is 56.8x the category mean ($9,367,112.495) for 423450 (n=108). Upper fence: $2,650,021.875 (iqr method).",
+            "affectedAwards": [
+              "70FB7020F00000080"
+            ]
+          }
+        ],
+        "fiveCs": {
+          "condition": "Award 70FB7020F00000080 valued at $532,157,710.52 is a statistical outlier (z-score: 56.80) within its NAICS/PSC category.",
+          "criteria": "Statistical pricing analysis per OECD bid rigging guidelines. Awards exceeding 1.5x IQR above Q3 or z-score > 2.0 are flagged for price reasonableness review. FAR 15.404 requires price analysis for contract actions.",
+          "cause": "Price outliers may reflect unique project scope, emergency procurement premiums, specialized requirements, or insufficient competition leading to higher prices.",
+          "effect": "An award valued significantly above comparable procurements may indicate insufficient price negotiation or lack of competitive pricing pressure. Total exposure: $532,157,710.52.",
+          "recommendation": "Review price analysis documentation. Compare with similar awards from other agencies. Examine competition method and number of offers. Verify whether the scope justifies the premium over comparable awards."
+        },
+        "source": "signal_consolidation",
+        "aiTag": "RULE",
+        "entityContext": {
+          "naicsDescription": "MEDICAL, DENTAL, AND HOSPITAL EQUIPMENT AND SUPPLIES MERCHANT WHOLESALERS",
+          "totalAwardsInDataset": 2,
+          "firstAwardDate": "2020-04-23",
+          "lastAwardDate": "2020-05-02"
+        }
+      }
+    ]
+  },
+  {
+    "entityName": "HANESBRANDS INC.",
+    "indicators": [
+      "R002",
+      "R006"
+    ],
+    "totalExposure": 350000000,
+    "convergenceScore": 98916456.58423553,
+    "findings": [
+      {
+        "id": "F-R002-HANES-INC-NONCOMP",
+        "entityName": "HANESBRANDS INC.",
+        "indicatorId": "R002",
+        "indicatorName": "Non-Competitive Awards",
+        "severity": "high",
+        "materialityScore": 24729114.146058884,
+        "totalDollarValue": 175000000,
+        "signalCount": 1,
+        "affectedAwardIds": [
+          "70FB7020F00000079"
+        ],
+        "signals": [
+          {
+            "indicatorId": "R002",
+            "indicatorName": "Non-Competitive Awards",
+            "severity": "high",
+            "entityType": "recipient",
+            "entityId": "HANESBRANDS INC.",
+            "entityName": "HANESBRANDS INC.",
+            "value": 100,
+            "threshold": 50,
+            "context": "1 of 1 award (100.0%) to HANESBRANDS INC. was non-competitive. Non-competed amount: $175,000,000 (100.0% of total).",
+            "affectedAwards": [
+              "70FB7020F00000079"
+            ]
+          }
+        ],
+        "fiveCs": {
+          "condition": "100.0% of the award (by count) to HANESBRANDS INC. was non-competitive, totaling $175,000,000 across 1 award.",
+          "criteria": "FAR 6.302 permits non-competitive procurement only under specific circumstances (sole source, urgency, national security). OECD Guidelines (2025) flag persistent non-competitive patterns as a procurement integrity indicator.",
+          "cause": "Non-competitive awards may reflect unique capabilities (e.g., FFRDC, UARC status), legitimate sole-source justifications, or habitual use of non-competitive mechanisms without adequate market research.",
+          "effect": "$175,000,000 in awards bypassed competition. While individual justifications may be valid, the cumulative pattern reduces the transparency and competitiveness of the procurement portfolio.",
+          "recommendation": "Verify sole-source justifications (J&A documentation) for the largest non-competitive awards. Check entity type via SAM.gov (FFRDC/UARC status may explain the pattern). Consider whether market research could identify additional qualified sources."
+        },
+        "source": "signal_consolidation",
+        "aiTag": "RULE",
+        "entityContext": {
+          "naicsDescription": "MEDICAL, DENTAL, AND HOSPITAL EQUIPMENT AND SUPPLIES MERCHANT WHOLESALERS",
+          "totalAwardsInDataset": 1,
+          "firstAwardDate": "2020-04-21",
+          "lastAwardDate": "2020-04-21"
+        }
+      },
+      {
+        "id": "F-R006-70FB7-HANES-OUTLIER",
+        "entityName": "70FB7020F00000079 (HANESBRANDS INC.)",
+        "indicatorId": "R006",
+        "indicatorName": "Price Outliers",
+        "severity": "high",
+        "materialityScore": 24729114.146058884,
+        "totalDollarValue": 175000000,
+        "signalCount": 1,
+        "affectedAwardIds": [
+          "70FB7020F00000079"
+        ],
+        "signals": [
+          {
+            "indicatorId": "R006",
+            "indicatorName": "Price Outliers",
+            "severity": "high",
+            "entityType": "award",
+            "entityId": "70FB7020F00000079",
+            "entityName": "70FB7020F00000079 (HANESBRANDS INC.)",
+            "value": 18.7,
+            "threshold": 2650022,
+            "context": "Award 70FB7020F00000079 ($175,000,000) to HANESBRANDS INC. is 18.7x the category mean ($9,367,112.495) for 423450 (n=108). Upper fence: $2,650,021.875 (iqr method).",
+            "affectedAwards": [
+              "70FB7020F00000079"
+            ]
+          }
+        ],
+        "fiveCs": {
+          "condition": "Award 70FB7020F00000079 valued at $175,000,000 is a statistical outlier (z-score: 18.70) within its NAICS/PSC category.",
+          "criteria": "Statistical pricing analysis per OECD bid rigging guidelines. Awards exceeding 1.5x IQR above Q3 or z-score > 2.0 are flagged for price reasonableness review. FAR 15.404 requires price analysis for contract actions.",
+          "cause": "Price outliers may reflect unique project scope, emergency procurement premiums, specialized requirements, or insufficient competition leading to higher prices.",
+          "effect": "An award valued significantly above comparable procurements may indicate insufficient price negotiation or lack of competitive pricing pressure. Total exposure: $175,000,000.",
+          "recommendation": "Review price analysis documentation. Compare with similar awards from other agencies. Examine competition method and number of offers. Verify whether the scope justifies the premium over comparable awards."
+        },
+        "source": "signal_consolidation",
+        "aiTag": "RULE",
+        "entityContext": {
+          "naicsDescription": "MEDICAL, DENTAL, AND HOSPITAL EQUIPMENT AND SUPPLIES MERCHANT WHOLESALERS",
+          "totalAwardsInDataset": 1,
+          "firstAwardDate": "2020-04-21",
+          "lastAwardDate": "2020-04-21"
+        }
+      }
+    ]
+  }
+]

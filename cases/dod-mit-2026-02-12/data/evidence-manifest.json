@@ -1,0 +1,306 @@
+[
+  {
+    "id": "E-F-R003-DEPAR-OF-SPLITTING-threshold",
+    "hypothesisId": "F-R003-DEPAR-OF-SPLITTING",
+    "type": "csv",
+    "title": "Awards Near Regulatory Thresholds",
+    "description": "24 awards within 10% below a regulatory threshold.",
+    "filePath": "evidence/summary/F-R003-DEPAR-OF-SPLITTING-near-threshold-awards.csv",
+    "metadata": {
+      "nearThresholdCount": 24,
+      "thresholds": [
+        250000,
+        7500000
+      ],
+      "signalCount": 7
+    }
+  },
+  {
+    "id": "E-F-R004-MURRA-BENJA-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-MURRA-BENJA-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 786 vendors (total: $21,907,187,179.48).",
+    "filePath": "evidence/summary/F-R004-MURRA-BENJA-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 786,
+      "grandTotal": 21907187179.480232,
+      "topVendorShare": 38.6,
+      "signalCount": 3
+    }
+  },
+  {
+    "id": "E-F-R001-DEPAR-OF-SINGLEBID-competition",
+    "hypothesisId": "F-R001-DEPAR-OF-SINGLEBID",
+    "type": "csv",
+    "title": "Competition Data for Flagged Awards",
+    "description": "786 awards with competition fields. Supports analysis of single-bid patterns.",
+    "filePath": "evidence/summary/F-R001-DEPAR-OF-SINGLEBID-competition-data.csv",
+    "metadata": {
+      "totalAwards": 786,
+      "withOfferData": 786,
+      "singleBidCount": 785,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R001-DEPAR-OF-SINGLEBID-offer-dist",
+    "hypothesisId": "F-R001-DEPAR-OF-SINGLEBID",
+    "type": "csv",
+    "title": "Distribution of Offers Received",
+    "description": "Breakdown of how many offers were received per competed award.",
+    "filePath": "evidence/summary/F-R001-DEPAR-OF-SINGLEBID-offer-distribution.csv",
+    "metadata": {
+      "distribution": {
+        "1": 785,
+        "3": 1
+      }
+    }
+  },
+  {
+    "id": "E-F-R006-W58P0-GLAXO-OUTLIER-prices",
+    "hypothesisId": "F-R006-W58P0-GLAXO-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "10 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-W58P0-GLAXO-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 10,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-W56KG-THE-OUTLIER-prices",
+    "hypothesisId": "F-R006-W56KG-THE-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "53 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-W56KG-THE-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 53,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-W56KG-THE-OUTLIER-2-prices",
+    "hypothesisId": "F-R006-W56KG-THE-OUTLIER-2",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "53 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-W56KG-THE-OUTLIER-2-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 53,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-W56KG-THE-OUTLIER-3-prices",
+    "hypothesisId": "F-R006-W56KG-THE-OUTLIER-3",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "53 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-W56KG-THE-OUTLIER-3-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 53,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-W56KG-THE-OUTLIER-4-prices",
+    "hypothesisId": "F-R006-W56KG-THE-OUTLIER-4",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "53 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-W56KG-THE-OUTLIER-4-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 53,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-ADVAN-ELECT-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-ADVAN-ELECT-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 6 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-ADVAN-ELECT-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 6,
+      "competitionTypes": 2,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-ADVAN-ELECT-NONCOMP-detail",
+    "hypothesisId": "F-R002-ADVAN-ELECT-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "6 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-ADVAN-ELECT-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 6,
+      "totalNonCompetedAmount": 231512195.59
+    }
+  },
+  {
+    "id": "E-F-R002-BAE-SYSTE-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-BAE-SYSTE-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 3 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-BAE-SYSTE-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 3,
+      "competitionTypes": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-BAE-SYSTE-NONCOMP-detail",
+    "hypothesisId": "F-R002-BAE-SYSTE-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "3 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-BAE-SYSTE-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 3,
+      "totalNonCompetedAmount": 106138520.56
+    }
+  },
+  {
+    "id": "E-F-R002-G-D-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-G-D-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 2 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-G-D-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 2,
+      "competitionTypes": 2,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-G-D-NONCOMP-detail",
+    "hypothesisId": "F-R002-G-D-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "2 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-G-D-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 2,
+      "totalNonCompetedAmount": 89558628.5
+    }
+  },
+  {
+    "id": "E-F-R002-MISSI-SYSTE-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-MISSI-SYSTE-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 31 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-MISSI-SYSTE-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 31,
+      "competitionTypes": 2,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-MISSI-SYSTE-NONCOMP-detail",
+    "hypothesisId": "F-R002-MISSI-SYSTE-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "31 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-MISSI-SYSTE-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 31,
+      "totalNonCompetedAmount": 85978278.39999999
+    }
+  },
+  {
+    "id": "E-F-R004-CONTR-WATTS-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-CONTR-WATTS-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 786 vendors (total: $21,907,187,179.48).",
+    "filePath": "evidence/summary/F-R004-CONTR-WATTS-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 786,
+      "grandTotal": 21907187179.480232,
+      "topVendorShare": 38.6,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-HAMBL-AEROS-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-HAMBL-AEROS-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 3 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-HAMBL-AEROS-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 3,
+      "competitionTypes": 2,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-HAMBL-AEROS-NONCOMP-detail",
+    "hypothesisId": "F-R002-HAMBL-AEROS-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "3 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-HAMBL-AEROS-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 3,
+      "totalNonCompetedAmount": 68487082
+    }
+  },
+  {
+    "id": "E-F-R004-RAMSY-GMBH-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-RAMSY-GMBH-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 786 vendors (total: $21,907,187,179.48).",
+    "filePath": "evidence/summary/F-R004-RAMSY-GMBH-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 786,
+      "grandTotal": 21907187179.480232,
+      "topVendorShare": 38.6,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R004-RMC-2021-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-RMC-2021-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 786 vendors (total: $21,907,187,179.48).",
+    "filePath": "evidence/summary/F-R004-RMC-2021-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 786,
+      "grandTotal": 21907187179.480232,
+      "topVendorShare": 38.6,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R004-SEQIR-USA-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-SEQIR-USA-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 786 vendors (total: $21,907,187,179.48).",
+    "filePath": "evidence/summary/F-R004-SEQIR-USA-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 786,
+      "grandTotal": 21907187179.480232,
+      "topVendorShare": 38.6,
+      "signalCount": 1
+    }
+  }
+]

@@ -1,0 +1,185 @@
+{
+  "totalClaims": 36,
+  "supported": 36,
+  "unsupported": 0,
+  "details": [
+    {
+      "claim": "Signal R002 (Non-Competitive Awards) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002"
+    },
+    {
+      "claim": "Signal R002 (Non-Competitive Awards) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002"
+    },
+    {
+      "claim": "Signal R002 (Non-Competitive Awards) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002"
+    },
+    {
+      "claim": "Signal R002 (Non-Competitive Awards) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002"
+    },
+    {
+      "claim": "Signal R002 (Non-Competitive Awards) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002"
+    },
+    {
+      "claim": "Signal R004 (Vendor Concentration) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004"
+    },
+    {
+      "claim": "Signal R004 (Vendor Concentration) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004"
+    },
+    {
+      "claim": "Signal R004 (Vendor Concentration) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004"
+    },
+    {
+      "claim": "Signal R004 (Vendor Concentration) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004"
+    },
+    {
+      "claim": "Signal R004 (Vendor Concentration) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004"
+    },
+    {
+      "claim": "Signal R006 (Price Outliers) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006"
+    },
+    {
+      "claim": "Signal R006 (Price Outliers) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006"
+    },
+    {
+      "claim": "Signal R001 (Single-Bid Competition) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R001"
+    },
+    {
+      "claim": "Signal R006 (Price Outliers) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006"
+    },
+    {
+      "claim": "Signal R006 (Price Outliers) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006"
+    },
+    {
+      "claim": "Signal R006 (Price Outliers) is referenced",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006"
+    },
+    {
+      "claim": "Signal R002 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002.value"
+    },
+    {
+      "claim": "Signal R002 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002.value"
+    },
+    {
+      "claim": "Signal R002 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002.value"
+    },
+    {
+      "claim": "Signal R002 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002.value"
+    },
+    {
+      "claim": "Signal R002 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R002.value"
+    },
+    {
+      "claim": "Signal R004 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004.value"
+    },
+    {
+      "claim": "Signal R004 value (100) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004.value"
+    },
+    {
+      "claim": "Signal R004 value (99.6) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004.value"
+    },
+    {
+      "claim": "Signal R004 value (98.6) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004.value"
+    },
+    {
+      "claim": "Signal R004 value (98.6) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R004.value"
+    },
+    {
+      "claim": "Signal R006 value (58.7) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006.value"
+    },
+    {
+      "claim": "Signal R006 value (56.8) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006.value"
+    },
+    {
+      "claim": "Signal R001 value (45.6) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R001.value"
+    },
+    {
+      "claim": "Signal R006 value (28.7) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006.value"
+    },
+    {
+      "claim": "Signal R006 value (18.7) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006.value"
+    },
+    {
+      "claim": "Signal R006 value (16) appears in report",
+      "status": "supported",
+      "evidenceRef": "signals.json → R006.value"
+    },
+    {
+      "claim": "Total signal count (1465) is correct",
+      "status": "supported",
+      "evidenceRef": "signals.json → summary.totalSignals"
+    },
+    {
+      "claim": "Non-accusatory disclaimer is present",
+      "status": "supported"
+    },
+    {
+      "claim": "Methodology references (OCP/OECD) are present",
+      "status": "supported"
+    },
+    {
+      "claim": "Provenance section is present",
+      "status": "supported"
+    }
+  ],
+  "passed": true
+}

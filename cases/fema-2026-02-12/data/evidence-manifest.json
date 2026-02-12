@@ -1,0 +1,291 @@
+[
+  {
+    "id": "E-F-R001-DEPAR-OF-SINGLEBID-competition",
+    "hypothesisId": "F-R001-DEPAR-OF-SINGLEBID",
+    "type": "csv",
+    "title": "Competition Data for Flagged Awards",
+    "description": "2178 awards with competition fields. Supports analysis of single-bid patterns.",
+    "filePath": "evidence/summary/F-R001-DEPAR-OF-SINGLEBID-competition-data.csv",
+    "metadata": {
+      "totalAwards": 2178,
+      "withOfferData": 2178,
+      "singleBidCount": 2175,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R001-DEPAR-OF-SINGLEBID-offer-dist",
+    "hypothesisId": "F-R001-DEPAR-OF-SINGLEBID",
+    "type": "csv",
+    "title": "Distribution of Offers Received",
+    "description": "Breakdown of how many offers were received per competed award.",
+    "filePath": "evidence/summary/F-R001-DEPAR-OF-SINGLEBID-offer-distribution.csv",
+    "metadata": {
+      "distribution": {
+        "1": 2175,
+        "3": 2,
+        "4": 1
+      }
+    }
+  },
+  {
+    "id": "E-F-R002-PARKD-ADVAN-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-PARKD-ADVAN-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 2 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-PARKD-ADVAN-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 2,
+      "competitionTypes": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-PARKD-ADVAN-NONCOMP-detail",
+    "hypothesisId": "F-R002-PARKD-ADVAN-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "2 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-PARKD-ADVAN-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 2,
+      "totalNonCompetedAmount": 543407710.52
+    }
+  },
+  {
+    "id": "E-F-R006-70FB7-PARKD-OUTLIER-prices",
+    "hypothesisId": "F-R006-70FB7-PARKD-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "127 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-70FB7-PARKD-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 127,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R004-AMERI-MEDIC-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-AMERI-MEDIC-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 1917 vendors (total: $11,511,196,462.23).",
+    "filePath": "evidence/summary/F-R004-AMERI-MEDIC-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 1917,
+      "grandTotal": 11511196462.229912,
+      "topVendorShare": 6.02,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-HANES-INC-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-HANES-INC-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 1 award by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-HANES-INC-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 1,
+      "competitionTypes": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-HANES-INC-NONCOMP-detail",
+    "hypothesisId": "F-R002-HANES-INC-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "1 non-competed award sorted by amount.",
+    "filePath": "evidence/summary/F-R002-HANES-INC-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 1,
+      "totalNonCompetedAmount": 175000000
+    }
+  },
+  {
+    "id": "E-F-R006-70FB7-HANES-OUTLIER-prices",
+    "hypothesisId": "F-R006-70FB7-HANES-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "127 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-70FB7-HANES-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 127,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-HSFE6-RESIL-OUTLIER-prices",
+    "hypothesisId": "F-R006-HSFE6-RESIL-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "577 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-HSFE6-RESIL-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 577,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-70FA3-GUIDE-OUTLIER-prices",
+    "hypothesisId": "F-R006-70FA3-GUIDE-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "97 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-70FA3-GUIDE-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 97,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R006-70FA3-BAE-OUTLIER-prices",
+    "hypothesisId": "F-R006-70FA3-BAE-OUTLIER",
+    "type": "csv",
+    "title": "Price Analysis by NAICS Category",
+    "description": "39 awards with category-relative pricing statistics.",
+    "filePath": "evidence/summary/F-R006-70FA3-BAE-OUTLIER-price-analysis.csv",
+    "metadata": {
+      "totalAwards": 39,
+      "naicsCategories": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-GENER-DYNAM-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-GENER-DYNAM-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 1 award by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-GENER-DYNAM-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 1,
+      "competitionTypes": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-GENER-DYNAM-NONCOMP-detail",
+    "hypothesisId": "F-R002-GENER-DYNAM-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "1 non-competed award sorted by amount.",
+    "filePath": "evidence/summary/F-R002-GENER-DYNAM-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 1,
+      "totalNonCompetedAmount": 97205551.4
+    }
+  },
+  {
+    "id": "E-F-R002-3M-COMPA-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-3M-COMPA-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 6 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-3M-COMPA-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 6,
+      "competitionTypes": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-3M-COMPA-NONCOMP-detail",
+    "hypothesisId": "F-R002-3M-COMPA-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "6 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-3M-COMPA-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 6,
+      "totalNonCompetedAmount": 95542614.4
+    }
+  },
+  {
+    "id": "E-F-R004-THE-RAND-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-THE-RAND-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 1917 vendors (total: $11,511,196,462.23).",
+    "filePath": "evidence/summary/F-R004-THE-RAND-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 1917,
+      "grandTotal": 11511196462.229912,
+      "topVendorShare": 6.02,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R004-CROWL-LOGIS-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-CROWL-LOGIS-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 1917 vendors (total: $11,511,196,462.23).",
+    "filePath": "evidence/summary/F-R004-CROWL-LOGIS-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 1917,
+      "grandTotal": 11511196462.229912,
+      "topVendorShare": 6.02,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R004-RJCL-CORPO-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-RJCL-CORPO-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 1917 vendors (total: $11,511,196,462.23).",
+    "filePath": "evidence/summary/F-R004-RJCL-CORPO-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 1917,
+      "grandTotal": 11511196462.229912,
+      "topVendorShare": 6.02,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-STAND-TEXTI-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-STAND-TEXTI-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 1 award by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-STAND-TEXTI-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 1,
+      "competitionTypes": 1,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-STAND-TEXTI-NONCOMP-detail",
+    "hypothesisId": "F-R002-STAND-TEXTI-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "1 non-competed award sorted by amount.",
+    "filePath": "evidence/summary/F-R002-STAND-TEXTI-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 1,
+      "totalNonCompetedAmount": 41940000
+    }
+  },
+  {
+    "id": "E-F-R004-JOHNS-CONTR-CONCENTRATION-concentration",
+    "hypothesisId": "F-R004-JOHNS-CONTR-CONCENTRATION",
+    "type": "csv",
+    "title": "Vendor Concentration Analysis",
+    "description": "Spending distribution across 1917 vendors (total: $11,511,196,462.23).",
+    "filePath": "evidence/summary/F-R004-JOHNS-CONTR-CONCENTRATION-vendor-concentration.csv",
+    "metadata": {
+      "vendorCount": 1917,
+      "grandTotal": 11511196462.229912,
+      "topVendorShare": 6.02,
+      "signalCount": 1
+    }
+  }
+]
