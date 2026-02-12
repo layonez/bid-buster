@@ -135,6 +135,7 @@ export async function runInvestigation(
       signals: signalResult.signals,
       hypotheses: hypothesesForAgent,
       awards: collectorResult.awards,
+      materialFindings,
       config: config.investigator,
       deps,
       logger,

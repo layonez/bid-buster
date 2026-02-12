@@ -63,6 +63,7 @@ export interface InvestigatorInput {
   signals: Signal[];
   hypotheses: Hypothesis[];
   awards: NormalizedAward[];
+  materialFindings?: MaterialFinding[];
   config: InvestigatorConfig;
   deps: InvestigatorDeps;
   logger: pino.Logger;
@@ -151,6 +152,7 @@ function buildInitialPrompt(
   signals: Signal[],
   hypotheses: Hypothesis[],
   awards: NormalizedAward[],
+  materialFindings?: MaterialFinding[],
 ): string {
   const totalAmount = awards.reduce((sum, a) => sum + a.awardAmount, 0);
   const uniqueRecipients = new Set(awards.map((a) => a.recipientName)).size;
@@ -167,25 +169,6 @@ function buildInitialPrompt(
     `- **Unique agencies**: ${uniqueAgencies}\n` +
     `- **Date range**: ${dateRange}\n`;
 
-  const signalSection =
-    `## Detected Signals (${signals.length} total)\n\n` +
-    signals
-      .map(
-        (s) =>
-          `### [${s.severity.toUpperCase()}] ${s.indicatorName} (${s.indicatorId})\n` +
-          `- **Entity**: ${s.entityName} (${s.entityType})\n` +
-          `- **Value**: ${s.value} (threshold: ${s.threshold})\n` +
-          `- **Context**: ${s.context}\n` +
-          `- **Affected awards**: ${s.affectedAwards.slice(0, 5).join(", ")}${s.affectedAwards.length > 5 ? ` (+${s.affectedAwards.length - 5} more)` : ""}`,
-      )
-      .join("\n\n");
-
-  const hypothesisSection =
-    `## Current Hypotheses (${hypotheses.length})\n\n` +
-    hypotheses
-      .map((h) => `- **${h.id}** [${h.severity}]: ${h.question}`)
-      .join("\n");
-
   const topRecipients = getTopRecipients(awards, 10);
   const recipientSection =
     `## Top Recipients by Award Value\n` +
@@ -196,13 +179,61 @@ function buildInitialPrompt(
       )
       .join("\n");
 
+  // Use material findings if available (compact), otherwise top signals
+  let findingsSection: string;
+  if (materialFindings && materialFindings.length > 0) {
+    findingsSection =
+      `## Material Findings (${materialFindings.length} prioritized from ${signals.length} raw signals)\n\n` +
+      materialFindings
+        .map(
+          (f) =>
+            `### ${f.id}: [${f.severity.toUpperCase()}] ${f.indicatorName} — ${f.entityName}\n` +
+            `- **Dollar exposure**: $${f.totalDollarValue.toLocaleString()}\n` +
+            `- **Signals**: ${f.signalCount} signals from indicator ${f.indicatorId}\n` +
+            `- **Affected awards**: ${f.affectedAwardIds.slice(0, 5).join(", ")}${f.affectedAwardIds.length > 5 ? ` (+${f.affectedAwardIds.length - 5} more)` : ""}\n` +
+            (f.fiveCs ? `- **Condition**: ${f.fiveCs.condition}\n- **Criteria**: ${f.fiveCs.criteria}\n- **Cause**: ${f.fiveCs.cause}\n- **Effect**: ${f.fiveCs.effect}\n` : "") +
+            (f.entityContext ? `- **Entity context**: ${f.entityContext.naicsDescription ?? "unknown industry"}${f.entityContext.setAsideType ? `, ${f.entityContext.setAsideType}` : ""}, ${f.entityContext.totalAwardsInDataset} awards in dataset` : ""),
+        )
+        .join("\n\n");
+  } else {
+    // Fallback: top 50 signals by severity (not all 1,454)
+    const severityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    const topSignals = [...signals]
+      .sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))
+      .slice(0, 50);
+
+    findingsSection =
+      `## Top Signals (${topSignals.length} of ${signals.length} total, sorted by severity)\n\n` +
+      topSignals
+        .map(
+          (s) =>
+            `### [${s.severity.toUpperCase()}] ${s.indicatorName} (${s.indicatorId})\n` +
+            `- **Entity**: ${s.entityName} (${s.entityType})\n` +
+            `- **Value**: ${s.value} (threshold: ${s.threshold})\n` +
+            `- **Context**: ${s.context}\n` +
+            `- **Affected awards**: ${s.affectedAwards.slice(0, 3).join(", ")}${s.affectedAwards.length > 3 ? ` (+${s.affectedAwards.length - 3} more)` : ""}`,
+        )
+        .join("\n\n");
+  }
+
+  // Top hypotheses only (matching material findings or top 20)
+  const topHypotheses = hypotheses.slice(0, 20);
+  const hypothesisSection =
+    `## Key Questions (${topHypotheses.length} of ${hypotheses.length} total)\n\n` +
+    topHypotheses
+      .map((h) => `- **${h.id}** [${h.severity}]: ${h.question}`)
+      .join("\n");
+
   return (
     `You are investigating procurement data. Here is the context:\n\n` +
     `${awardSummary}\n` +
     `${recipientSection}\n\n` +
-    `${signalSection}\n\n` +
+    `${findingsSection}\n\n` +
     `${hypothesisSection}\n\n` +
-    `Please investigate these signals using the available tools. Focus on understanding ` +
+    `You have tools to drill into individual awards, verify entities via SAM.gov, ` +
+    `screen against sanctions lists, fetch sub-awards, and run statistical analyses ` +
+    `on the full ${awards.length}-award dataset. Use them to investigate the material findings above.\n\n` +
+    `Please investigate these findings using the available tools. Focus on understanding ` +
     `context, verifying entities, and establishing baselines. After your investigation, ` +
     `provide your structured findings as described in your instructions.`
   );
@@ -551,7 +582,7 @@ function parseFindings(text: string, hypotheses: Hypothesis[]): {
  * Gracefully returns empty findings if Claude API is unavailable.
  */
 export async function runInvestigativeAgent(input: InvestigatorInput): Promise<InvestigationFindings> {
-  const { signals, hypotheses, awards, config, deps, logger } = input;
+  const { signals, hypotheses, awards, materialFindings, config, deps, logger } = input;
 
   const emptyFindings: InvestigationFindings = {
     enrichedHypotheses: [],
@@ -582,7 +613,7 @@ export async function runInvestigativeAgent(input: InvestigatorInput): Promise<I
   const executors = buildToolExecutors(awards, deps, logger, reasoningSteps, agentFindings);
 
   // Build initial prompt
-  const initialPrompt = buildInitialPrompt(signals, hypotheses, awards);
+  const initialPrompt = buildInitialPrompt(signals, hypotheses, awards, materialFindings);
 
   // Initialize conversation
   const messages: Anthropic.Messages.MessageParam[] = [
