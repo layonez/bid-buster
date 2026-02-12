@@ -29,6 +29,7 @@ export interface Hypothesis {
   context: string;
   evidenceNeeded: string[];
   severity: Severity;
+  aiEnhanced?: boolean;
 }
 
 // ─── Evidence Types ──────────────────────────────────────────────────────────
@@ -276,4 +277,5 @@ export interface DashboardData {
   investigationFindings?: InvestigationFindings;
   materialFindings?: MaterialFinding[];
   convergenceEntities?: ConvergenceEntity[];
+  verification?: { totalClaims: number; supported: number; unsupported: number; passed: boolean };
 }

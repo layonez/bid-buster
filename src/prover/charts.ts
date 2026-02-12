@@ -331,8 +331,15 @@ export function buildPriceOutlierSpec(
       .flatMap((s) => s.affectedAwards),
   );
 
-  const data = awards
-    .filter((a) => a.naicsCode)
+  // Cap data points for SVG rendering: keep all outliers + sample of normal awards
+  const withNaics = awards.filter((a) => a.naicsCode);
+  const outlierAwards = withNaics.filter((a) => outlierAwardIds.has(a.awardId));
+  const normalAwards = withNaics.filter((a) => !outlierAwardIds.has(a.awardId));
+  const maxNormalPoints = 500;
+  const sampledNormal = normalAwards.length > maxNormalPoints
+    ? normalAwards.filter((_, i) => i % Math.ceil(normalAwards.length / maxNormalPoints) === 0)
+    : normalAwards;
+  const data = [...outlierAwards, ...sampledNormal]
     .map((a) => ({
       awardId: a.awardId,
       amount: a.awardAmount,

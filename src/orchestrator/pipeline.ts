@@ -308,7 +308,12 @@ export async function runInvestigation(
     materialFindings,
   });
 
-  // Build interactive dashboard
+  // ─── Step 8: Verify ───────────────────────────────────────────────────
+  logger.info(`Step 8/${totalSteps}: Verifying report claims...`);
+
+  const verification = verifyReport(report, signalResult, queryContext, materialFindings);
+
+  // Build interactive dashboard (after verification so it can include results)
   const agencyLabel = params.subtierAgency ?? params.agency ?? "All Agencies";
   const title = params.recipient
     ? `${agencyLabel} → ${params.recipient}`
@@ -327,12 +332,8 @@ export async function runInvestigation(
     investigationFindings,
     materialFindings,
     convergenceEntities,
+    verification: { totalClaims: verification.totalClaims, supported: verification.supported, unsupported: verification.unsupported, passed: verification.passed },
   });
-
-  // ─── Step 8: Verify ───────────────────────────────────────────────────
-  logger.info(`Step 8/${totalSteps}: Verifying report claims...`);
-
-  const verification = verifyReport(report, signalResult, queryContext, materialFindings);
   logger.info(
     { claims: verification.totalClaims, supported: verification.supported, unsupported: verification.unsupported },
     verification.passed ? "Verification passed" : "Verification found unsupported claims",

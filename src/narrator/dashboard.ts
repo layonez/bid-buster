@@ -188,6 +188,10 @@ ${buildStyles()}
         <div class="summary-value">${allNonExec.length}</div>
         <div class="summary-label">Hypotheses</div>
       </div>
+      ${data.verification ? `<div class="summary-card ${data.verification.passed ? "card-verified" : "card-high"}">
+        <div class="summary-value">${data.verification.supported}/${data.verification.totalClaims}</div>
+        <div class="summary-label">${data.verification.passed ? "Claims Verified" : "Verification Issues"}</div>
+      </div>` : ""}
     </div>
     ${execHypothesis ? `<div class="exec-summary">${escapeHtml(execHypothesis.context)}</div>` : ""}
     ${investigationFindings ? `<div class="exec-summary"><strong>Investigator Assessment:</strong> ${escapeHtml(investigationFindings.summary)}</div>` : ""}
@@ -494,6 +498,7 @@ function buildHypothesisCard(
         <span class="card-id">${escapeHtml(h.id)}</span>
         ${badge}
         <span class="card-question">${escapeHtml(h.question)}</span>
+        ${h.aiEnhanced ? '<span class="ai-tag">AI-ENHANCED</span>' : ""}
         <span class="card-toggle">&#9660;</span>
       </div>
       <div class="card-body">
@@ -724,6 +729,7 @@ function buildStyles(): string {
   .summary-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; text-align: center; }
   .summary-card.card-high { border-color: var(--color-high); background: var(--color-high-bg); }
   .summary-card.card-medium { border-color: var(--color-medium); background: var(--color-medium-bg); }
+  .summary-card.card-verified { border-color: #22c55e; background: #f0fdf4; }
   .summary-card.card-low { border-color: var(--color-low); background: var(--color-low-bg); }
   .summary-value { font-size: 1.8em; font-weight: 700; line-height: 1.2; }
   .summary-label { font-size: 0.8em; color: var(--color-text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }

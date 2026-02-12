@@ -227,6 +227,7 @@ export function assembleReport(data: ReportData): string {
     lines.push("");
     lines.push(`**Severity:** ${hypothesis.severity}`);
     lines.push(`**Triggered by:** ${hypothesis.signalIds.join(", ")}`);
+    if (hypothesis.aiEnhanced) lines.push(`\`[AI-ENHANCED]\``);
     lines.push("");
     lines.push(hypothesis.context);
     lines.push("");

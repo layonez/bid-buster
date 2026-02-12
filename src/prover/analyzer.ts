@@ -306,7 +306,7 @@ async function produceR002Evidence(
     hypothesisId: hypothesis.id,
     type: "csv",
     title: "Competition Type Breakdown",
-    description: `Breakdown of ${awards.length} awards by competition type code with dollar amounts.`,
+    description: `Breakdown of ${awards.length} ${awards.length === 1 ? "award" : "awards"} by competition type code with dollar amounts.`,
     filePath: `evidence/${filename}`,
     metadata: {
       totalAwards: awards.length,
@@ -340,7 +340,7 @@ async function produceR002Evidence(
     hypothesisId: hypothesis.id,
     type: "csv",
     title: "Non-Competed Awards Detail",
-    description: `${nonCompeted.length} non-competed awards sorted by amount.`,
+    description: `${nonCompeted.length} non-competed ${nonCompeted.length === 1 ? "award" : "awards"} sorted by amount.`,
     filePath: `evidence/${detailFilename}`,
     metadata: { nonCompetedCount: nonCompeted.length, totalNonCompetedAmount: nonCompeted.reduce((s, a) => s + a.awardAmount, 0) },
   });

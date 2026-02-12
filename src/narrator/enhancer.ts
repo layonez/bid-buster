@@ -123,5 +123,6 @@ async function enhanceSingleHypothesis(
   return {
     ...hypothesis,
     context: aiText,
+    aiEnhanced: true,
   };
 }
