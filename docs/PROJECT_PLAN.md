@@ -1,7 +1,7 @@
 # Procurement Investigator - Project Plan
 
-> **Last updated:** 2026-02-11 (evening session)
-> **Current stage:** Phases G-J implemented (consolidation, Five C's, briefing, narrative, dashboard polish). 100 tests passing. Next: Phase K (entity-scoped evidence, dashboard <1 MB, finding diversity, bug fixes).
+> **Last updated:** 2026-02-12
+> **Current stage:** Phases K-L complete + Final Polish. 125 tests passing. FEMA COVID-19 demo case validated (7,259 awards, 1,465 signals, 16 material findings, 36/36 verification, 5.0 MB folder).
 
 ## Executive Summary
 
@@ -9,11 +9,13 @@
 
 **Key differentiator:** Investigation-as-Code -- every finding is reproducible, every claim is verified against computed evidence, every run produces a git-committable case folder with CSV evidence files.
 
-**Phases G-J complete:** Signals now consolidate from 1,356 → 20 material findings with Five C's audit structure. README.md briefing provides a 1-page entry point. Dashboard halved from 19 MB → 10 MB. Agent reasoning tools (`log_reasoning`, `create_finding`) are operational. 100 tests passing.
+**Phases K-L + Final Polish complete:** The FEMA COVID-19 demo case validates the full pipeline at scale: 7,259 awards fetched via subtier agency support, 1,465 signals across 4 indicators (R001, R002, R004, R006), consolidated to 16 material findings with Five C's audit structure, Opus 4.6 investigative agent performing 35 tool calls across 8 iterations ($4.15), 14 AI-enhanced hypotheses via Claude Sonnet, 4 SVG charts, 22 evidence CSVs, 36/36 verification passing, all in a 5.0 MB git-committable folder. 125 tests passing across 13 test files.
 
-**Current challenge: File size.** The analytical framework is solid but the output folder is still 543 MB because evidence CSVs remain global 10K-row dumps (518 MB) and the dashboard still inlines all data (10 MB). Phase K addresses this: entity-scoped evidence filtering, dashboard external data loading, and report truncation will bring the case folder under 10 MB.
+**Output size revolution achieved (Phase K):** Case folder went from 543 MB to 5.0 MB -- a 99.1% reduction. Entity-scoped evidence filtering, dashboard to 277 KB, case.md truncation, JSON deduplication, and `--full-evidence` gating all landed.
 
-**Secondary challenge: Finding diversity.** 19 of 20 findings are R006 price outliers because single mega-dollar awards dominate the materiality score. Phase K adds per-indicator caps to force diversity across indicator types.
+**Finding diversity fixed (Phase K):** Per-indicator caps (`maxPerIndicator: 5`) and diminishing returns scoring ensure mixed indicator representation. FEMA case shows 4 distinct indicator types firing (R001, R002, R004, R006).
+
+**Demo-ready:** FEMA COVID-19 procurement case with known flagged vendors (Parkdale $532M, Hanesbrands $175M, 3M $96M, GDIT $97M) detected automatically. AirBoss appears in signals + hypotheses. Convergence analysis identifies Parkdale and Hanesbrands as multi-indicator entities.
 
 ---
 
@@ -23,41 +25,44 @@
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| CLI (commander) | 5 | ~430 | Complete -- 3 commands: `run`, `fetch`, `signal`; `--with-transactions`, `--deep`, `--charts`, `--full-evidence` flags |
-| Collector (API client) | 4 | ~679 | Complete -- pagination, throttling, caching, detail + transaction enrichment |
+| CLI (commander) | 5 | ~480 | Complete -- 3 commands: `run`, `fetch`, `signal`; `--with-transactions`, `--deep`, `--charts`, `--full-evidence`, `--subtier-agency` flags |
+| Collector (API client) | 4 | ~750 | Complete -- pagination, throttling, caching, detail + transaction enrichment, subtier agency support |
 | Normalizer | 3 | ~167 | Complete -- search results, award details, transactions |
-| Signaler (6 indicators + consolidator) | 10 | ~1,170 | Complete -- all 6 indicators + MaterialFinding consolidation with materiality scoring |
+| Signaler (6 indicators + consolidator) | 10 | ~1,300 | Complete -- all 6 indicators + MaterialFinding consolidation with per-indicator caps + convergence analysis |
 | Enrichment clients | 4 | ~600 | Complete -- SAM.gov, OpenSanctions, sub-awards clients |
-| Investigator (Opus 4.6) | 2 | ~510 | Complete -- 8 tools (incl. `log_reasoning`, `create_finding`), reasoning steps, agent findings |
+| Investigator (Opus 4.6) | 2 | ~550 | Complete -- 8 tools (incl. `log_reasoning`, `create_finding`), reasoning steps, agent findings, context overflow fix |
 | Hypothesis Maker + Five C's | 3 | ~370 | Complete -- templates + Five C's per-indicator structure + AI executive assessment |
-| Prover (evidence + charts) | 3 | ~1,130 | Complete -- CSV evidence + Vega-Lite SVG charts (entity-scoped filtering pending K1) |
-| Narrator + Enhancer + Dashboard + Briefing + Narrative | 6 | ~900 | Complete -- case.md + dashboard.html + README.md briefing + investigation-narrative.md |
-| Verifier | 1 | ~120 | Complete -- claim-evidence cross-check + tautology detection |
-| Orchestrator | 1 | ~420 | Complete -- 8-step pipeline + consolidation + briefing + narrative + data dir |
-| Shared utilities | 4 | ~290 | Complete -- logger, fs (query-param naming), provenance (file hashes), types (MaterialFinding, InvestigationStep, etc.) |
-| **Total** | **46 files** | **~6,790 lines** | **All agents fully operational** |
+| Prover (evidence + charts) | 3 | ~1,300 | Complete -- entity-scoped CSV evidence + Vega-Lite SVG charts + `--full-evidence` gating |
+| Narrator + Enhancer + Dashboard + Briefing + Narrative | 6 | ~1,100 | Complete -- case.md + dashboard.html (277 KB) + README.md + AI narrative + USAspending links |
+| Verifier | 1 | ~140 | Complete -- claim-evidence cross-check + tautology detection + verification badge |
+| Orchestrator | 1 | ~520 | Complete -- 8-step pipeline + consolidation + JSON dedup + folder cleanup |
+| Shared utilities | 5 | ~350 | Complete -- logger, fs, provenance, types (MaterialFinding, ConvergenceEntity, etc.) |
+| **Total** | **47 files** | **~7,630 lines** | **All agents fully operational** |
 
-**No stubs remaining.** All agents fully operational. Phase K will address evidence scoping and output size reduction.
+**No stubs remaining.** All agents fully operational. Output size revolution complete (543 MB to 5.0 MB).
 
 ### Test Suite
 
 | Test File | Tests | What It Covers |
 |-----------|-------|----------------|
 | `config.test.ts` | 3 | Config loading, defaults, threshold merging (incl. materiality config) |
-| `indicators.test.ts` | 12 | R001-R004, R006 indicators + R004 tautology suppression + R006 peer group caveat |
+| `indicators.test.ts` | 13 | R001-R004, R006 indicators + R004 tautology suppression + R006 peer group caveat |
 | `engine.test.ts` | 3 | Engine initialization, indicator filtering, severity sorting |
 | `hypothesis.test.ts` | 4 | Template generation, non-accusatory language, deduplication |
 | `report.test.ts` | 10 | Disclaimer, signals, hypotheses, provenance, evidence links, Data Scope section, verifier tautology detection |
-| `prover.test.ts` | 5 | Evidence artifact generation, CSV validity, escaping, master summary, executive skip |
+| `prover.test.ts` | 9 | Entity-scoped evidence filtering, CSV validity, escaping, `--full-evidence` gating, R004 full-dataset context |
 | `charts.test.ts` | 12 | Vega-Lite spec builders (6 chart types), SVG rendering, adaptive log-scale binning |
 | `enrichment.test.ts` | 16 | SAM.gov, OpenSanctions, sub-awards clients with mocked HTTP |
 | `investigator.test.ts` | 15 | 8 tool definitions, agent loop, max iteration cap, findings structure |
-| `consolidator.test.ts` | 8 | Signal grouping, materiality scoring, maxFindings cap, severity escalation, source tags |
+| `consolidator.test.ts` | 22 | Signal grouping, materiality scoring, maxFindings cap, per-indicator caps, convergence analysis, diminishing returns |
 | `five-cs.test.ts` | 6 | All 6 indicator templates, non-accusatory language, unknown indicator fallback |
 | `briefing.test.ts` | 6 | README.md structure, findings display, next steps, disclaimer, AI tags |
-| **Total** | **100** | **All passing** |
+| `collector.test.ts` | 6 | `buildSearchFilters` -- toptier/subtier agency, recipient filter, time period |
+| **Total** | **125** | **All passing** |
 
 ### Validated on Real Data
+
+#### Demo Case 1: DoD → MIT, FY2023 (development baseline)
 
 **Demo slice:** Department of Defense → MIT, FY2023 (full DoD dataset: 10,000 awards)
 - 10,000 awards fetched via paginated search, 9,994+ details enriched from cache
@@ -79,13 +84,46 @@
 - All 54 awards are MIT (expected: `--recipient` filter), so R004 concentration was structurally 100%
 - See "Data Interpretation Issues Found & Fixed" below for full analysis
 
-**Output quality audit findings (critical -- drives next phases):**
-- case.md is **820KB / 10,907 lines** -- unreadable by any human
-- dashboard.html is **19MB** -- chokes most browsers
+#### Demo Case 2: FEMA COVID-19 Procurement (hackathon demo case)
+
+**The showcase demo:** FEMA COVID-19 emergency procurement, FY2020 (via `--subtier-agency`).
+
+Command: `investigate run --subtier-agency="Federal Emergency Management Agency" --period=2020-01-01:2020-12-31 --deep --charts`
+
+**Results:**
+- **7,259 FEMA awards** fetched via new subtier agency support (73 paginated API calls)
+- **1,465 signals** across 4 indicators: R001 (single-bid), R002 (non-competitive), R004 (concentration), R006 (price outliers)
+- **→ 16 material findings** via consolidation with per-indicator caps (92x reduction from raw signals)
+- **2 convergence entities** (Parkdale, Hanesbrands) -- flagged by multiple independent indicators
+- **Opus 4.6 investigative agent:** 8 iterations, 35 tool calls, $4.15 cost
+  - Used `log_reasoning` (12 calls), `create_finding` (4 calls), `fetch_comparable_awards`, `verify_entity`, `screen_sanctions`
+  - Identified entity patterns, SAM.gov verification attempts, sanctions screening
+- **14 AI-enhanced hypotheses** via Claude Sonnet per-hypothesis narrative enrichment
+- **AI narrative** generated by Sonnet at top of README.md (executive assessment)
+- **4 SVG charts** (award distribution, vendor concentration, competition breakdown, price outlier)
+- **22 evidence CSVs** -- entity-scoped (not global dumps), plus summary evidence for top findings
+- **36/36 verification** passing (100%, 0 unsupported claims)
+- **5.0 MB total folder size** -- fully git-committable (down from 543 MB pre-Phase K)
+- USAspending links embedded for all award IDs in reports
+
+**Known vendors detected automatically:**
+- **Parkdale Mills** -- $532M, convergence entity (R004 concentration + R006 price outlier), 3 awards
+- **Hanesbrands** -- $175M, convergence entity (R004 concentration + R006 price outlier), 2 awards
+- **3M Company** -- $96M, R006 price outlier
+- **GDIT (General Dynamics IT)** -- $97M, R004 concentration
+- **Fillakit LLC** -- appears in R006 signals (low severity), not in top-16 findings (would need `--recipient` filter or lower thresholds)
+- **AirBoss Defense** -- appears in signals + hypotheses, not in top-16 findings (same threshold dynamics)
+
+**R003 (contract splitting) legitimately zero on FEMA data:** Emergency procurement uses large blanket purchases, not threshold-adjacent splitting patterns. This is expected behavior, not a bug.
+
+#### Output quality audit findings (historical -- drove Phases G-J)
+
+- case.md was **820KB / 10,907 lines** -- unreadable by any human
+- dashboard.html was **19MB** -- choked most browsers
 - **883 evidence files / 550MB** -- not git-committable as promised
-- **1,356 signals** listed flat without materiality hierarchy -- a $7.9K sole-source gets same "HIGH" as $1.59B
+- **1,356 signals** listed flat without materiality hierarchy -- a $7.9K sole-source got same "HIGH" as $1.59B
 - **613 hypotheses** with identical template language (352 R006 + 260 R002) -- no prioritization or narrative arc
-- Evidence CSVs are **generic, not entity-specific**: every R002 hypothesis links to the same 10K-row global CSV
+- Evidence CSVs were **generic, not entity-specific**: every R002 hypothesis linked to the same 10K-row global CSV
 - **Zero visible AI contribution** in the default run (no `--deep`, no investigation section)
 - No "so what?" context: missing industry benchmarks, justification codes, dollar-weighted severity, next steps
 - See "Output Quality Audit" section below for full analysis and fix plan
@@ -93,6 +131,19 @@
 ### Git History
 
 ```
+b1b97fb Final remaining fixes: verification badge, AI-ENHANCED tags, chart size, grammar
+2df5feb Final polish: fix silent indicators, dashboard rendering, title/agency, grammar
+f27d1d3 Fix investigator context overflow: pass material findings instead of all signals
+a68eabf Fix model IDs: claude-opus-4-6-20250219 → claude-opus-4-6, ai model → claude-sonnet
+e8b9491 Phase L: Critical bug fixes, convergence analysis, entity context, AI narrative, USAspending links
+aa0a1d4 Phase K integration fixes: verification alignment, folder cleanup, dashboard 277KB, JSON dedup
+b42bce2 Phase K: Output size revolution, finding diversity, subtier agency support, and FEMA demo case
+da77238 Update PROJECT_PLAN.md with Phases G-J results, comparison analysis, and Phase K plan
+50b1c02 Phases G-J: Output quality revolution — consolidation, Five C's, briefing, narrative, dashboard polish
+28df47e Update PROJECT_PLAN.md with output quality audit and Phases G-J roadmap
+9b60578 Fix systemic data interpretation issues via QueryContext propagation
+84b08df Phases A-F: investigator agent, enrichment clients, charts, and dashboard
+8a4a040 Enhanced MVP: prover agent, AI narrator, and Opus 4.6 roadmap
 50f22db Add CLAUDE.md project constitution
 70add6a Update PROJECT_PLAN.md as comprehensive implementation reference
 bd46b7a Add verifier agent, AI enhancement, README, and MIT license
@@ -150,7 +201,7 @@ After:    Collect → Rules → CONSOLIDATE → 20 Material Findings (Five C's) 
               |  5. Writes investigation narrative   |
               +-----------------------------------+
 
-Remaining (Phase K): Entity-scoped evidence CSVs + dashboard <1MB → folder <10MB
+Achieved (Phase K): Entity-scoped evidence CSVs + dashboard 277KB → folder 5.0MB
 ```
 
 ### Source Layout (actual)
@@ -232,9 +283,9 @@ src/
 
 ### Case Folder Output
 
-**Current (post-G-J):** `cases/dod-mit-2026-02-11/` -- 543 MB, query-param naming, README.md entry point, material findings. Evidence still 518 MB (entity-scoped filtering pending Phase K1).
+**Current (post-K-L):** `cases/fema-2026-02-12/` -- 5.0 MB, git-committable, query-param naming, README.md entry point, entity-scoped evidence, 277 KB dashboard, AI narrative, USAspending links.
 
-**Target (Phase K):** Compact, browsable, git-committable (<10 MB default).
+**Achieved target:** Compact, browsable, git-committable (<10 MB). Down from 543 MB pre-Phase K (99.1% reduction).
 
 ```
 cases/dod-mit-2023_20260211T1629/       # Agency-recipient-period_timestamp
@@ -267,13 +318,11 @@ cases/dod-mit-2023_20260211T1629/       # Agency-recipient-period_timestamp
 └── evidence-manifest.json
 ```
 
-**What's done (G-J):** Folder named by query params. README.md as primary output. `data/` subdirectory for JSON. `evidence/summary/`, `evidence/detail/`, `evidence/charts/` subdirectories created. Agent reasoning as dedicated artifact (`investigation-narrative.md`).
-
-**What's pending (Phase K):** Entity-scoped evidence CSVs (K1). Dashboard external data loading (K2). `--full-evidence` gating of large files (K6). Target: <10MB default.
+**What's done (G-L + Final Polish):** Folder named by query params. README.md as primary output with AI narrative. `data/` subdirectory for JSON (deduplicated -- no root-level duplicates). `evidence/summary/`, `evidence/detail/`, `evidence/charts/` subdirectories. Entity-scoped evidence CSVs. Dashboard at 277 KB. `--full-evidence` gating of large files. Agent reasoning as dedicated artifact (`investigation-narrative.md`). USAspending links in reports. Convergence analysis in findings. Verification badge in dashboard.
 
 ---
 
-## Next Implementation: Phases G-J (Output Quality Revolution)
+## Phases G-J: Output Quality Revolution (COMPLETED)
 
 ### The Problem We're Solving
 
@@ -943,7 +992,7 @@ signals:
 
 ## Enhancement Roadmap
 
-### Completed (Phases 0-F + QueryContext + G-J)
+### Completed (Phases 0-L + Final Polish)
 
 | Phase | Enhancement | Status |
 |-------|-------------|--------|
@@ -969,6 +1018,19 @@ signals:
 | J2 | case.md inverted pyramid (material findings first, collapsible signals) | Done |
 | J3 | Next Steps section in README.md | Done |
 | J4 | AI tags (`[RULE]`, `[AI-ENHANCED]`, `[AI-DISCOVERED]`) | Done |
+| K1 | Entity-scoped evidence filtering (518 MB → entity-specific CSVs) | Done |
+| K2 | Dashboard to 277 KB (inline only material-finding data, truncated signals) | Done |
+| K3 | Finding diversity (per-indicator caps, diminishing returns, convergence analysis) | Done |
+| K4 | R003 threshold display bug fix (dollar threshold, not cluster size) | Done |
+| K5 | case.md truncation (material findings only, signal table capped) | Done |
+| K6 | JSON deduplication (root-level duplicates removed, `--full-evidence` gating) | Done |
+| K7 | USAspending award links in reports and evidence CSVs | Done |
+| -- | Subtier agency support (`--subtier-agency` flag, `buildSearchFilters()`) | Done |
+| -- | FEMA COVID-19 demo case validation (7,259 awards, full pipeline) | Done |
+| L | Critical bug fixes: convergence analysis, entity context, AI narrative, model IDs | Done |
+| -- | Investigator context overflow fix (pass findings instead of all signals) | Done |
+| -- | Model ID fixes (claude-opus-4-6, claude-sonnet) | Done |
+| -- | Final polish: silent indicator fix, dashboard rendering, verification badge, AI-ENHANCED tags, chart sizing | Done |
 
 ### Phases G-J: Impact Assessment (2026-02-11)
 
@@ -992,20 +1054,51 @@ Comparative run with identical parameters: DoD → MIT, FY2023, `--charts --no-a
 
 **Verdict:** The intellectual framework is solid (consolidation, Five C's, briefing, narrative, tags). But the **file size targets were largely missed** because the two biggest offenders -- entity-scoped evidence filtering (G2) and dashboard external data loading -- were not completed. These are the highest priority for Phase K.
 
-### Next: Phase K (Output Size Revolution + Quality Fixes)
+### Phases K-L + Final Polish: Impact Assessment (2026-02-12)
 
-Phase K addresses the unfinished size targets from G-J and the bugs discovered during the comparison run. **This is what transforms a 543 MB case folder into a <10 MB git-committable artifact.**
+Comparative assessment showing transformation from Phase G-J state to final demo-ready state. Validated on the FEMA COVID-19 demo case.
 
-See detailed specifications in the section below.
+| Metric | Before (post-G-J, DoD-MIT) | After (post-K-L, FEMA) | Change | Target | Hit? |
+|--------|---------------------------|------------------------|--------|--------|------|
+| **Total folder size** | **543 MB** | **5.0 MB** | **-99.1%** | <10 MB | **Yes** |
+| **Evidence CSVs** | 518 MB / 881 files (global dumps) | ~1 MB / 22 files (entity-scoped) | **-99.8%** | Entity-scoped | **Yes** |
+| **dashboard.html** | 10 MB | **277 KB** | **-97.2%** | <1 MB | **Yes** |
+| **case.md** | 844 KB | ~30 KB | **-96.4%** | <50 KB | **Yes** |
+| **Finding diversity** | 19/20 R006 (one indicator dominates) | 4 indicators firing (R001, R002, R004, R006) | Mixed | Per-indicator caps | **Yes** |
+| **Convergence analysis** | None | 2 entities (Parkdale, Hanesbrands) | New feature | Multi-indicator entities | **Yes** |
+| **AI agent (--deep)** | Tools worked but context overflow | 8 iterations, 35 tool calls, $4.15 | Operational | Stable agent | **Yes** |
+| **AI narrative** | None in README | Sonnet-generated executive assessment | New feature | AI summary | **Yes** |
+| **AI-enhanced hypotheses** | None | 14 per-hypothesis narratives | New feature | Sonnet enrichment | **Yes** |
+| **USAspending links** | Plain text award IDs | Clickable links to USAspending | New feature | Traceability | **Yes** |
+| **Verification** | 2,716/2,716 (DoD) | 36/36 (FEMA) | 100% both | 100% | **Yes** |
+| **Verification badge** | None in dashboard | Green checkmark badge | New feature | Visual indicator | **Yes** |
+| **Subtier agency** | Not supported | `--subtier-agency` flag | New feature | FEMA, etc. | **Yes** |
+| **Tests** | 100 | **125** | +25% | All pass | **Yes** |
+| **Source files** | 46 files / ~6,790 lines | **47 files / ~7,630 lines** | +12% | -- | -- |
+
+**Verdict:** All G-J unfinished targets are now met. The output is demo-ready: a 5.0 MB git-committable folder with entity-scoped evidence, AI investigation narrative, convergence analysis, USAspending links, and 100% verification. The FEMA COVID-19 case automatically detects known flagged vendors (Parkdale, Hanesbrands, 3M) without any domain-specific configuration.
+
+### Remaining Known Issues
+
+| Issue | Impact | Workaround |
+|-------|--------|------------|
+| **Fillakit LLC not in top findings** | Low-severity R006 signal exists but doesn't rank into top-16 | Use `--recipient=Fillakit` or lower materiality thresholds |
+| **AirBoss Defense not in top findings** | Appears in signals + hypotheses but not material findings top-16 | Same: use recipient filter or lower thresholds |
+| **SAM.gov API key needed** | Entity verification returns empty without key | Set `SAM_GOV_API_KEY` env var |
+| **OpenSanctions API key needed** | Sanctions screening skipped without key | Set `OPENSANCTIONS_API_KEY` env var |
+| **R003 zero signals on FEMA data** | Legitimate: emergency procurement doesn't cluster near thresholds | Expected behavior, not a bug |
+| **R005 requires `--with-transactions`** | Transaction data not fetched by default (expensive: 1 call/award) | Use `--with-transactions` flag |
 
 ### Long-Term (post-hackathon)
 
 | Enhancement | What |
 |-------------|------|
+| `--with-transactions` for R005 | Enable modification indicator on FEMA data (currently requires explicit flag) |
 | Period-specific obligation amounts | Use transaction sums instead of cumulative `awardAmount` |
 | Cross-agency R004 suppression | Suppress when `--agency` yields single agency |
 | Market-wide R006 peer groups | Fetch NAICS peers beyond filtered dataset |
 | H2: `search_usaspending` tool | Agent makes real API queries for baselines (not just in-memory) |
+| Lower-threshold mode | `--sensitive` flag to surface Fillakit/AirBoss-level entities in findings |
 | OCDS data format support | International procurement datasets |
 | Beneficial ownership (BODS) | Link suppliers to ultimate owners |
 | Network analysis | Entity relationship graphs |
@@ -1014,7 +1107,7 @@ See detailed specifications in the section below.
 
 ---
 
-## Phase K: Output Size Revolution + Quality Fixes
+## Phase K: Output Size Revolution + Quality Fixes (COMPLETED)
 
 ### K1: Entity-Scoped Evidence Filtering (CRITICAL -- biggest size win)
 
@@ -1191,38 +1284,44 @@ Option B (proper): Fix the R003 indicator (`src/signaler/indicators/splitting.ts
 
 To resume development:
 
-1. **Read this document** -- contains full implementation state, G-J results, and Phase K plan
+1. **Read this document** -- contains full implementation state, K-L results, and remaining roadmap
 2. **Check git log** -- `git log --oneline` shows what's committed
-3. **Run tests** -- `npm test` (100 tests, all should pass)
+3. **Run tests** -- `npm test` (125 tests, all should pass)
 4. **Run typecheck** -- `npm run typecheck` (should be clean)
 5. **Check cache** -- `.cache/` preserves API data; re-runs are instant with `--no-ai`
-6. **Review the Phase K plan above** -- K1 (entity-scoped evidence) is the critical first step
-7. **Compare output folders:**
-   - `cases/case-2026-02-11/` -- pre-G-J baseline (550 MB, no findings, no README)
-   - `cases/dod-mit-2026-02-11/` -- post-G-J run (543 MB, 20 findings, README.md)
+6. **Review the FEMA demo case** -- `cases/fema-2026-02-12/` is the showcase output (5.0 MB)
+7. **Review remaining issues** -- see "Remaining Known Issues" table above
 
-### Key files for Phase K
+### Key files modified in Phases K-L + Final Polish
 
-| File | What to do |
-|------|------------|
-| `src/prover/analyzer.ts` | **K1:** Refactor `produceR00XEvidence()` to filter by `findings.affectedAwardIds` |
-| `src/narrator/dashboard.ts` | **K2:** Move data to external JSON or truncate inline to top-50 |
-| `src/signaler/consolidator.ts` | **K3:** Add `maxPerIndicator` cap + diminishing returns for R006 |
-| `src/signaler/indicators/splitting.ts` | **K4:** Fix `threshold` field to carry dollar value, not cluster size |
-| `src/hypothesis/five-cs.ts` | **K4:** Verify R003 template after threshold fix |
-| `src/narrator/report.ts` | **K5:** Truncate signal table, filter hypotheses to material findings only |
-| `src/orchestrator/pipeline.ts` | **K1/K2/K6:** Route evidence to summary vs detail dirs, remove JSON dupes |
-| `src/cli/config.ts` | **K3:** Add `maxPerIndicator` to MaterialityConfig |
-| `config/default.yaml` | **K3:** Add `maxPerIndicator: 5` |
+| File | What was done |
+|------|---------------|
+| `src/prover/analyzer.ts` | **K1:** Entity-scoped evidence filtering by `findings.affectedAwardIds` |
+| `src/narrator/dashboard.ts` | **K2:** Inline only material-finding data, 277 KB dashboard |
+| `src/signaler/consolidator.ts` | **K3:** Per-indicator caps, diminishing returns, convergence analysis |
+| `src/signaler/indicators/splitting.ts` | **K4:** Fixed `threshold` field to carry dollar value |
+| `src/narrator/report.ts` | **K5:** Truncated signal table, filtered hypotheses to material findings |
+| `src/orchestrator/pipeline.ts` | **K1/K2/K6:** Entity evidence routing, JSON dedup, folder cleanup |
+| `src/cli/config.ts` | **K3:** Added `maxPerIndicator` to MaterialityConfig |
+| `config/default.yaml` | **K3:** Added `maxPerIndicator: 5` |
+| `src/collector/usaspending.ts` | Subtier agency support (`buildSearchFilters()`) |
+| `src/cli/commands/investigate.ts` | `--subtier-agency` flag |
+| `src/investigator/agent.ts` | Context overflow fix (pass findings, not all signals) |
+| `src/narrator/briefing.ts` | AI narrative integration, USAspending links |
+| `src/verifier/checker.ts` | Verification badge support |
+| `tests/unit/collector.test.ts` | New: 6 tests for `buildSearchFilters` |
+| `tests/unit/consolidator.test.ts` | Expanded: 8 → 22 tests (per-indicator caps, convergence, diminishing returns) |
+| `tests/unit/prover.test.ts` | Expanded: 5 → 9 tests (entity-scoped evidence, `--full-evidence` gating) |
 
-### New files added in Phases G-J
+### New files added in Phases G-L
 
 | File | Purpose |
 |------|---------|
-| `src/signaler/consolidator.ts` | Signal → MaterialFinding consolidation with materiality scoring |
+| `src/signaler/consolidator.ts` | Signal → MaterialFinding consolidation with materiality scoring + convergence |
 | `src/hypothesis/five-cs.ts` | GAO Yellow Book Five C's templates per indicator |
-| `src/narrator/briefing.ts` | README.md executive briefing generator |
+| `src/narrator/briefing.ts` | README.md executive briefing generator with AI narrative |
 | `src/narrator/narrative.ts` | Investigation narrative renderer (for `--deep` mode) |
-| `tests/unit/consolidator.test.ts` | 8 tests for consolidation logic |
+| `tests/unit/consolidator.test.ts` | 22 tests for consolidation logic |
 | `tests/unit/five-cs.test.ts` | 6 tests for Five C's templates |
 | `tests/unit/briefing.test.ts` | 6 tests for briefing generation |
+| `tests/unit/collector.test.ts` | 6 tests for search filter construction |
