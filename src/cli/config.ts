@@ -63,15 +63,13 @@ const INVESTIGATOR_DEFAULTS = {
 
 const CHARTS_DEFAULTS = {
   enabled: true,
-  width: 600,
+  width: 700,
   height: 400,
   types: {
-    awardDistribution: true,
-    vendorConcentration: true,
-    competitionBreakdown: true,
-    priceOutlier: true,
-    modificationTimeline: true,
-    thresholdClustering: true,
+    topVendors: true,
+    competitionAnalysis: true,
+    awardTimeline: true,
+    findingsExposure: true,
   },
 } as const;
 
@@ -167,12 +165,10 @@ const InvestigatorSchema = z.object({
 });
 
 const ChartTypesSchema = z.object({
-  awardDistribution: z.boolean().optional(),
-  vendorConcentration: z.boolean().optional(),
-  competitionBreakdown: z.boolean().optional(),
-  priceOutlier: z.boolean().optional(),
-  modificationTimeline: z.boolean().optional(),
-  thresholdClustering: z.boolean().optional(),
+  topVendors: z.boolean().optional(),
+  competitionAnalysis: z.boolean().optional(),
+  awardTimeline: z.boolean().optional(),
+  findingsExposure: z.boolean().optional(),
 });
 
 const ChartsSchema = z.object({
@@ -277,12 +273,10 @@ export interface AppConfig {
     width: number;
     height: number;
     types: {
-      awardDistribution: boolean;
-      vendorConcentration: boolean;
-      competitionBreakdown: boolean;
-      priceOutlier: boolean;
-      modificationTimeline: boolean;
-      thresholdClustering: boolean;
+      topVendors: boolean;
+      competitionAnalysis: boolean;
+      awardTimeline: boolean;
+      findingsExposure: boolean;
     };
   };
 }

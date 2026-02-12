@@ -1,11 +1,14 @@
 /**
  * Vega-Lite chart spec builders for visual evidence.
- * Each function builds a Vega-Lite JSON spec with inline data.
- * Priority: distribution, concentration, competition (80% of value).
+ * 4 clear, compelling charts designed for hackathon demo impact:
+ *   1. Top Vendors by Dollar Value (horizontal bar)
+ *   2. Competition Analysis (donut by count + by dollar value)
+ *   3. Award Timeline by Month (stacked bar, competed vs non-competed)
+ *   4. Material Findings by Exposure (horizontal bar, color by indicator)
  */
 import type { TopLevelSpec } from "vega-lite";
 import type { NormalizedAward } from "../normalizer/schema.js";
-import type { Signal, ChartArtifact, ChartType } from "../shared/types.js";
+import type { Signal, ChartArtifact, ChartType, MaterialFinding } from "../shared/types.js";
 import type { AppConfig } from "../cli/config.js";
 import type { Transaction } from "../normalizer/schema.js";
 import { renderChartToSvg } from "./renderer.js";
@@ -18,7 +21,57 @@ export interface ChartBuilderInput {
   transactions: Map<string, Transaction[]>;
   config: AppConfig;
   evidenceDir: string;
+  materialFindings?: MaterialFinding[];
 }
+
+// ─── Dollar Formatting ───────────────────────────────────────────────────────
+
+function formatDollars(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return `$${value.toFixed(0)}`;
+}
+
+// ─── Competition Label Mapping ───────────────────────────────────────────────
+
+const COMPETITION_LABELS: Record<string, string> = {
+  A: "Full & Open",
+  B: "Not Available",
+  C: "Not Competed",
+  D: "Full after Exclusion",
+  E: "Follow On",
+  F: "Competed (SAP)",
+  G: "Not Competed (SAP)",
+  NDO: "Non-Domestic",
+};
+
+function getCompetitionLabel(code: string | undefined): string {
+  if (!code) return "Unknown";
+  return COMPETITION_LABELS[code] ?? code;
+}
+
+function isNonCompetitive(code: string | undefined): boolean {
+  return ["B", "C", "G", "NDO"].includes(code ?? "");
+}
+
+// ─── Color Palette ───────────────────────────────────────────────────────────
+
+const COLORS = {
+  competitive: "#2563EB",     // blue-600
+  nonCompetitive: "#DC2626",  // red-600
+  mixedWarm: "#EA580C",       // orange-600
+  neutral: "#6B7280",         // gray-500
+  indicators: {
+    R001: "#2563EB",  // blue
+    R002: "#DC2626",  // red
+    R003: "#059669",  // emerald
+    R004: "#7C3AED",  // purple
+    R005: "#D97706",  // amber
+    R006: "#EA580C",  // orange
+  } as Record<string, string>,
+};
 
 /**
  * Build all applicable chart specs based on detected signals.
@@ -26,7 +79,7 @@ export interface ChartBuilderInput {
  * Charts are written as SVG to the evidence directory.
  */
 export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifact[]> {
-  const { awards, signals, transactions, config, evidenceDir } = input;
+  const { awards, signals, config, evidenceDir, materialFindings } = input;
   const chartConfig = config.charts;
 
   if (!chartConfig.enabled || awards.length === 0) {
@@ -36,13 +89,13 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
   const artifacts: ChartArtifact[] = [];
   const { width, height } = chartConfig;
 
-  // Always generate award distribution histogram
-  if (chartConfig.types.awardDistribution) {
+  // Chart 1: Top Vendors by Dollar Value
+  if (chartConfig.types.topVendors) {
     const artifact = await buildAndRender(
-      "award-distribution",
-      buildAwardDistributionSpec(awards, width, height),
-      "Award Amount Distribution",
-      "Histogram of award amounts showing the distribution of contract values.",
+      "top-vendors",
+      buildTopVendorsSpec(awards, width, height),
+      "Top Vendors by Dollar Value",
+      "Top 15 vendors ranked by total award amount, color-coded by competition status.",
       [],
       signals.map((s) => s.indicatorId),
       evidenceDir,
@@ -50,76 +103,43 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
     if (artifact) artifacts.push(artifact);
   }
 
-  // Vendor concentration when R004 fires
-  const hasR004 = signals.some((s) => s.indicatorId === "R004");
-  if (chartConfig.types.vendorConcentration && hasR004) {
+  // Chart 2: Competition Analysis
+  if (chartConfig.types.competitionAnalysis) {
     const artifact = await buildAndRender(
-      "vendor-concentration",
-      buildVendorConcentrationSpec(awards, width, height),
-      "Vendor Concentration",
-      "Spending distribution across vendors showing market concentration.",
-      signals.filter((s) => s.indicatorId === "R004").flatMap((s) => [`H-R004-${s.entityId}`]),
-      ["R004"],
-      evidenceDir,
-    );
-    if (artifact) artifacts.push(artifact);
-  }
-
-  // Competition breakdown when R001/R002 fire
-  const hasCompetition = signals.some((s) => s.indicatorId === "R001" || s.indicatorId === "R002");
-  if (chartConfig.types.competitionBreakdown && hasCompetition) {
-    const artifact = await buildAndRender(
-      "competition-breakdown",
-      buildCompetitionBreakdownSpec(awards, width, height),
-      "Competition Type Breakdown",
-      "Stacked bar chart of competition types by awarding agency.",
-      signals.filter((s) => ["R001", "R002"].includes(s.indicatorId)).flatMap((s) => [`H-${s.indicatorId}-${s.entityId}`]),
+      "competition-analysis",
+      buildCompetitionAnalysisSpec(awards, width, height),
+      "Competition Analysis",
+      "Breakdown of awards by competition type: count vs. dollar value.",
+      [],
       ["R001", "R002"].filter((id) => signals.some((s) => s.indicatorId === id)),
       evidenceDir,
     );
     if (artifact) artifacts.push(artifact);
   }
 
-  // Price outlier scatter when R006 fires
-  const hasR006 = signals.some((s) => s.indicatorId === "R006");
-  if (chartConfig.types.priceOutlier && hasR006) {
+  // Chart 3: Award Timeline by Month
+  if (chartConfig.types.awardTimeline) {
     const artifact = await buildAndRender(
-      "price-outlier",
-      buildPriceOutlierSpec(awards, signals, width, height),
-      "Price Outlier Analysis",
-      "Scatter plot of award amounts by NAICS code highlighting statistical outliers.",
-      signals.filter((s) => s.indicatorId === "R006").flatMap((s) => [`H-R006-${s.entityId}`]),
-      ["R006"],
+      "award-timeline",
+      buildAwardTimelineSpec(awards, width, height),
+      "Award Timeline",
+      "Monthly award spending, segmented by competition status.",
+      [],
+      signals.map((s) => s.indicatorId),
       evidenceDir,
     );
     if (artifact) artifacts.push(artifact);
   }
 
-  // Threshold clustering when R003 fires
-  const hasR003 = signals.some((s) => s.indicatorId === "R003");
-  if (chartConfig.types.thresholdClustering && hasR003) {
+  // Chart 4: Material Findings by Exposure
+  if (chartConfig.types.findingsExposure && materialFindings && materialFindings.length > 0) {
     const artifact = await buildAndRender(
-      "threshold-clustering",
-      buildThresholdClusteringSpec(awards, width, height),
-      "Award Threshold Clustering",
-      "Distribution of award amounts relative to regulatory thresholds ($250K, $7.5M).",
-      signals.filter((s) => s.indicatorId === "R003").flatMap((s) => [`H-R003-${s.entityId}`]),
-      ["R003"],
-      evidenceDir,
-    );
-    if (artifact) artifacts.push(artifact);
-  }
-
-  // Modification timeline when R005 fires + transactions available
-  const hasR005 = signals.some((s) => s.indicatorId === "R005");
-  if (chartConfig.types.modificationTimeline && hasR005 && transactions.size > 0) {
-    const artifact = await buildAndRender(
-      "modification-timeline",
-      buildModificationTimelineSpec(transactions, signals, width, height),
-      "Contract Modification Timeline",
-      "Timeline of contract modifications showing obligation changes over time.",
-      signals.filter((s) => s.indicatorId === "R005").flatMap((s) => [`H-R005-${s.entityId}`]),
-      ["R005"],
+      "findings-exposure",
+      buildFindingsExposureSpec(materialFindings, width, height),
+      "Material Findings by Dollar Exposure",
+      "Top findings ranked by dollar exposure, color-coded by indicator type.",
+      materialFindings.map((f) => f.id),
+      [...new Set(materialFindings.map((f) => f.indicatorId))],
       evidenceDir,
     );
     if (artifact) artifacts.push(artifact);
@@ -128,408 +148,370 @@ export async function buildCharts(input: ChartBuilderInput): Promise<ChartArtifa
   return artifacts;
 }
 
-// ─── Spec Builders ──────────────────────────────────────────────────────────
+// ─── Chart 1: Top Vendors by Dollar Value ─────────────────────────────────
 
-export function buildAwardDistributionSpec(
+export function buildTopVendorsSpec(
   awards: NormalizedAward[],
   width: number,
   height: number,
 ): TopLevelSpec {
-  const amounts = awards.map((a) => a.awardAmount).filter((a) => a > 0);
-  const minAmount = Math.min(...amounts);
-  const maxAmount = Math.max(...amounts);
-  const useLogScale = amounts.length > 1 && maxAmount / minAmount > 100;
+  // Aggregate by vendor and competition status
+  const vendorData = new Map<string, { competitive: number; nonCompetitive: number; total: number }>();
 
-  if (useLogScale) {
-    // Log-scale binning for highly skewed data
-    const data = awards
-      .filter((a) => a.awardAmount > 0)
-      .map((a) => ({
-        logAmount: Math.log10(a.awardAmount),
-        recipient: a.recipientName,
-      }));
-
-    return {
-      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-      title: "Award Amount Distribution (log scale)",
-      width,
-      height,
-      data: { values: data },
-      mark: { type: "bar", tooltip: true },
-      encoding: {
-        x: {
-          field: "logAmount",
-          bin: { maxbins: 30 },
-          type: "quantitative",
-          title: "Award Amount (log₁₀ $)",
-        },
-        y: {
-          aggregate: "count",
-          type: "quantitative",
-          title: "Number of Awards",
-        },
-        color: { value: "#4C78A8" },
-      },
-    };
-  }
-
-  const data = awards.map((a) => ({
-    amount: a.awardAmount,
-    recipient: a.recipientName,
-  }));
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    title: "Award Amount Distribution",
-    width,
-    height,
-    data: { values: data },
-    mark: { type: "bar", tooltip: true },
-    encoding: {
-      x: {
-        field: "amount",
-        bin: { maxbins: 30 },
-        type: "quantitative",
-        title: "Award Amount ($)",
-        axis: { format: "~s" },
-      },
-      y: {
-        aggregate: "count",
-        type: "quantitative",
-        title: "Number of Awards",
-      },
-      color: { value: "#4C78A8" },
-    },
-  };
-}
-
-export function buildVendorConcentrationSpec(
-  awards: NormalizedAward[],
-  width: number,
-  height: number,
-): TopLevelSpec {
-  // Aggregate spending by vendor
-  const vendorTotals = new Map<string, number>();
   for (const award of awards) {
-    vendorTotals.set(
-      award.recipientName,
-      (vendorTotals.get(award.recipientName) ?? 0) + award.awardAmount,
-    );
-  }
-
-  // Top 10 vendors + "Others"
-  const sorted = [...vendorTotals.entries()].sort((a, b) => b[1] - a[1]);
-  const top10 = sorted.slice(0, 10);
-  const othersTotal = sorted.slice(10).reduce((sum, [, amt]) => sum + amt, 0);
-
-  const data = top10.map(([vendor, amount]) => ({
-    vendor: vendor.length > 30 ? vendor.slice(0, 27) + "..." : vendor,
-    amount,
-  }));
-  if (othersTotal > 0) {
-    data.push({ vendor: "Others", amount: othersTotal });
-  }
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    title: "Vendor Concentration (Top 10 by $ Value)",
-    width,
-    height,
-    data: { values: data },
-    mark: { type: "arc", innerRadius: 60, tooltip: true },
-    encoding: {
-      theta: { field: "amount", type: "quantitative" },
-      color: {
-        field: "vendor",
-        type: "nominal",
-        title: "Vendor",
-        legend: { orient: "right" },
-      },
-      tooltip: [
-        { field: "vendor", type: "nominal", title: "Vendor" },
-        { field: "amount", type: "quantitative", title: "Total ($)", format: ",.0f" },
-      ],
-    },
-  };
-}
-
-export function buildCompetitionBreakdownSpec(
-  awards: NormalizedAward[],
-  width: number,
-  height: number,
-): TopLevelSpec {
-  const COMPETITION_LABELS: Record<string, string> = {
-    A: "Full & Open",
-    B: "Not Available",
-    C: "Not Competed",
-    D: "Full after Exclusion",
-    E: "Follow On",
-    F: "Competed (SAP)",
-    G: "Not Competed (SAP)",
-    NDO: "Non-Domestic",
-  };
-
-  const data = awards.map((a) => {
-    const code = a.extentCompeted ?? "Unknown";
-    return {
-      agency: a.awardingAgency.length > 25
-        ? a.awardingAgency.slice(0, 22) + "..."
-        : a.awardingAgency,
-      competition: COMPETITION_LABELS[code] ?? code,
-      amount: a.awardAmount,
-    };
-  });
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    title: "Competition Type by Agency",
-    width,
-    height,
-    data: { values: data },
-    mark: { type: "bar", tooltip: true },
-    encoding: {
-      x: {
-        field: "agency",
-        type: "nominal",
-        title: "Awarding Agency",
-        axis: { labelAngle: -45 },
-      },
-      y: {
-        field: "amount",
-        aggregate: "sum",
-        type: "quantitative",
-        title: "Total Award Amount ($)",
-        axis: { format: "~s" },
-      },
-      color: {
-        field: "competition",
-        type: "nominal",
-        title: "Competition Type",
-        scale: {
-          domain: ["Full & Open", "Not Competed", "Not Available", "Follow On", "Competed (SAP)", "Not Competed (SAP)", "Full after Exclusion", "Non-Domestic", "Unknown"],
-          range: ["#4C78A8", "#E45756", "#F58518", "#72B7B2", "#54A24B", "#EECA3B", "#B279A2", "#FF9DA6", "#9D755D"],
-        },
-      },
-      tooltip: [
-        { field: "agency", type: "nominal", title: "Agency" },
-        { field: "competition", type: "nominal", title: "Competition" },
-        { field: "amount", aggregate: "sum", type: "quantitative", title: "Total ($)", format: ",.0f" },
-      ],
-    },
-  };
-}
-
-export function buildPriceOutlierSpec(
-  awards: NormalizedAward[],
-  signals: Signal[],
-  width: number,
-  height: number,
-): TopLevelSpec {
-  const outlierAwardIds = new Set(
-    signals
-      .filter((s) => s.indicatorId === "R006")
-      .flatMap((s) => s.affectedAwards),
-  );
-
-  // Cap data points for SVG rendering: keep all outliers + sample of normal awards
-  const withNaics = awards.filter((a) => a.naicsCode);
-  const outlierAwards = withNaics.filter((a) => outlierAwardIds.has(a.awardId));
-  const normalAwards = withNaics.filter((a) => !outlierAwardIds.has(a.awardId));
-  const maxNormalPoints = 500;
-  const sampledNormal = normalAwards.length > maxNormalPoints
-    ? normalAwards.filter((_, i) => i % Math.ceil(normalAwards.length / maxNormalPoints) === 0)
-    : normalAwards;
-  const data = [...outlierAwards, ...sampledNormal]
-    .map((a) => ({
-      awardId: a.awardId,
-      amount: a.awardAmount,
-      naics: a.naicsCode ?? "Unknown",
-      recipient: a.recipientName.length > 20
-        ? a.recipientName.slice(0, 17) + "..."
-        : a.recipientName,
-      outlier: outlierAwardIds.has(a.awardId) ? "Outlier" : "Normal",
-    }));
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    title: "Award Amounts by NAICS Code (Outliers Highlighted)",
-    width,
-    height,
-    data: { values: data },
-    mark: { type: "point", filled: true, tooltip: true },
-    encoding: {
-      x: {
-        field: "naics",
-        type: "nominal",
-        title: "NAICS Code",
-        axis: { labelAngle: -45 },
-      },
-      y: {
-        field: "amount",
-        type: "quantitative",
-        title: "Award Amount ($)",
-        axis: { format: "~s" },
-        scale: { type: "log" },
-      },
-      color: {
-        field: "outlier",
-        type: "nominal",
-        title: "Status",
-        scale: {
-          domain: ["Normal", "Outlier"],
-          range: ["#4C78A8", "#E45756"],
-        },
-      },
-      size: {
-        condition: { test: "datum.outlier === 'Outlier'", value: 120 },
-        value: 40,
-      },
-      tooltip: [
-        { field: "awardId", type: "nominal", title: "Award ID" },
-        { field: "recipient", type: "nominal", title: "Recipient" },
-        { field: "amount", type: "quantitative", title: "Amount ($)", format: ",.0f" },
-        { field: "naics", type: "nominal", title: "NAICS" },
-      ],
-    },
-  };
-}
-
-export function buildThresholdClusteringSpec(
-  awards: NormalizedAward[],
-  width: number,
-  height: number,
-): TopLevelSpec {
-  const thresholds = [250_000, 7_500_000];
-  const bandPct = 0.10;
-
-  const data = awards.map((a) => {
-    let nearestThreshold = "";
-    for (const t of thresholds) {
-      const lower = t * (1 - bandPct);
-      if (a.awardAmount >= lower && a.awardAmount <= t) {
-        nearestThreshold = `Near $${(t / 1000).toFixed(0)}K`;
-      }
+    const name = award.recipientName;
+    const entry = vendorData.get(name) ?? { competitive: 0, nonCompetitive: 0, total: 0 };
+    const amount = Math.max(0, award.awardAmount);
+    if (isNonCompetitive(award.extentCompeted)) {
+      entry.nonCompetitive += amount;
+    } else {
+      entry.competitive += amount;
     }
-    return {
-      amount: a.awardAmount,
-      zone: nearestThreshold || "Normal",
-      recipient: a.recipientName,
-    };
-  });
+    entry.total += amount;
+    vendorData.set(name, entry);
+  }
 
-  // Layer: histogram + threshold rule lines
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    title: "Award Amounts Near Regulatory Thresholds",
-    width,
-    height,
-    layer: [
-      {
-        data: { values: data },
-        mark: { type: "bar", tooltip: true },
-        encoding: {
-          x: {
-            field: "amount",
-            bin: { maxbins: 40 },
-            type: "quantitative",
-            title: "Award Amount ($)",
-            axis: { format: "~s" },
-          },
-          y: {
-            aggregate: "count",
-            type: "quantitative",
-            title: "Number of Awards",
-          },
-          color: {
-            field: "zone",
-            type: "nominal",
-            title: "Threshold Zone",
-            scale: {
-              domain: ["Normal", "Near $250K", "Near $7500K"],
-              range: ["#4C78A8", "#E45756", "#F58518"],
-            },
-          },
-        },
-      },
-      // Threshold lines
-      ...thresholds.map((t) => ({
-        data: { values: [{ threshold: t }] },
-        mark: {
-          type: "rule" as const,
-          color: "#E45756",
-          strokeDash: [4, 4],
-          strokeWidth: 2,
-        },
-        encoding: {
-          x: { field: "threshold", type: "quantitative" as const },
-        },
-      })),
-    ],
-  } as TopLevelSpec;
-}
+  // Top 15 vendors sorted by total
+  const sorted = [...vendorData.entries()]
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, 15);
 
-export function buildModificationTimelineSpec(
-  transactions: Map<string, Transaction[]>,
-  signals: Signal[],
-  width: number,
-  height: number,
-): TopLevelSpec {
-  const affectedAwardIds = new Set(
-    signals
-      .filter((s) => s.indicatorId === "R005")
-      .flatMap((s) => s.affectedAwards),
-  );
-
-  const data: Array<{ date: string; amount: number; awardId: string; cumulative: number }> = [];
-
-  for (const [awardId, txns] of transactions) {
-    if (!affectedAwardIds.has(awardId) && affectedAwardIds.size > 0) continue;
-
-    let cumulative = 0;
-    const sorted = [...txns].sort((a, b) => a.actionDate.localeCompare(b.actionDate));
-    for (const txn of sorted) {
-      cumulative += txn.federalActionObligation;
+  // Build flat data for stacked horizontal bar
+  const data: Array<{ vendor: string; amount: number; type: string; label: string; sortOrder: number }> = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const [vendor, amounts] = sorted[i];
+    const shortName = vendor.length > 35 ? vendor.slice(0, 32) + "..." : vendor;
+    const totalLabel = formatDollars(amounts.total);
+    if (amounts.competitive > 0) {
       data.push({
-        date: txn.actionDate,
-        amount: txn.federalActionObligation,
-        awardId: awardId.length > 15 ? awardId.slice(0, 12) + "..." : awardId,
-        cumulative,
+        vendor: shortName,
+        amount: amounts.competitive,
+        type: "Competitive",
+        label: totalLabel,
+        sortOrder: i,
+      });
+    }
+    if (amounts.nonCompetitive > 0) {
+      data.push({
+        vendor: shortName,
+        amount: amounts.nonCompetitive,
+        type: "Non-Competitive",
+        label: totalLabel,
+        sortOrder: i,
       });
     }
   }
 
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    title: "Contract Modification Timeline",
-    width,
-    height,
+    title: { text: "Who Got the Money?", subtitle: "Top 15 vendors by total award value" },
+    width: width,
+    height: Math.max(height, sorted.length * 28 + 60),
     data: { values: data },
-    mark: { type: "line", point: true, tooltip: true },
+    mark: { type: "bar", tooltip: true },
     encoding: {
-      x: {
-        field: "date",
-        type: "temporal",
-        title: "Action Date",
-      },
       y: {
-        field: "cumulative",
+        field: "vendor",
+        type: "nominal",
+        title: null,
+        sort: { field: "sortOrder", order: "ascending" },
+        axis: { labelLimit: 280 },
+      },
+      x: {
+        field: "amount",
         type: "quantitative",
-        title: "Cumulative Obligation ($)",
-        axis: { format: "~s" },
+        title: "Total Award Amount",
+        stack: "zero",
+        axis: { format: "~s", labelExpr: "'$' + datum.label" },
       },
       color: {
-        field: "awardId",
+        field: "type",
         type: "nominal",
-        title: "Award ID",
+        title: "Competition Status",
+        scale: {
+          domain: ["Competitive", "Non-Competitive"],
+          range: [COLORS.competitive, COLORS.nonCompetitive],
+        },
+        legend: { orient: "top" },
       },
       tooltip: [
-        { field: "awardId", type: "nominal", title: "Award ID" },
-        { field: "date", type: "temporal", title: "Date" },
-        { field: "amount", type: "quantitative", title: "Modification ($)", format: ",.0f" },
-        { field: "cumulative", type: "quantitative", title: "Cumulative ($)", format: ",.0f" },
+        { field: "vendor", type: "nominal", title: "Vendor" },
+        { field: "type", type: "nominal", title: "Status" },
+        { field: "amount", type: "quantitative", title: "Amount ($)", format: ",.0f" },
       ],
     },
+  } as TopLevelSpec;
+}
+
+// ─── Chart 2: Competition Analysis ────────────────────────────────────────
+
+export function buildCompetitionAnalysisSpec(
+  awards: NormalizedAward[],
+  width: number,
+  height: number,
+): TopLevelSpec {
+  // Aggregate by competition type: count and dollar value
+  const byType = new Map<string, { count: number; dollars: number }>();
+
+  for (const award of awards) {
+    const label = getCompetitionLabel(award.extentCompeted);
+    const entry = byType.get(label) ?? { count: 0, dollars: 0 };
+    entry.count += 1;
+    entry.dollars += Math.max(0, award.awardAmount);
+    byType.set(label, entry);
+  }
+
+  // Sort by dollar value descending
+  const sorted = [...byType.entries()].sort((a, b) => b[1].dollars - a[1].dollars);
+
+  // Build data for grouped bar (by count and by dollars)
+  const data: Array<{ type: string; metric: string; value: number; pct: number }> = [];
+  const totalCount = awards.length;
+  const totalDollars = sorted.reduce((sum, [, v]) => sum + v.dollars, 0);
+
+  for (const [label, vals] of sorted) {
+    data.push({
+      type: label,
+      metric: "By Count",
+      value: vals.count,
+      pct: totalCount > 0 ? (vals.count / totalCount) * 100 : 0,
+    });
+    data.push({
+      type: label,
+      metric: "By Dollar Value",
+      value: vals.dollars,
+      pct: totalDollars > 0 ? (vals.dollars / totalDollars) * 100 : 0,
+    });
+  }
+
+  // Determine which types are non-competitive for coloring
+  const nonCompLabels = new Set(["Not Competed", "Not Available", "Not Competed (SAP)", "Non-Domestic"]);
+  const typeColors: string[] = sorted.map(([label]) =>
+    nonCompLabels.has(label) ? COLORS.nonCompetitive :
+    label === "Full & Open" ? COLORS.competitive :
+    label === "Full after Exclusion" ? "#3B82F6" :
+    label === "Competed (SAP)" ? "#60A5FA" :
+    label === "Follow On" ? COLORS.mixedWarm :
+    COLORS.neutral,
+  );
+
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    title: { text: "How Competitive Was the Spending?", subtitle: "Awards by competition type (count vs. dollar value)" },
+    width: width,
+    height: height,
+    data: { values: data },
+    facet: {
+      column: {
+        field: "metric",
+        type: "nominal",
+        title: null,
+        header: { labelFontSize: 13, labelFontWeight: "bold" as const },
+      },
+    },
+    spec: {
+      width: (width / 2) - 40,
+      height: height - 100,
+      mark: { type: "bar", tooltip: true },
+      encoding: {
+        y: {
+          field: "type",
+          type: "nominal",
+          title: null,
+          sort: { field: "pct", order: "descending" },
+          axis: { labelLimit: 200 },
+        },
+        x: {
+          field: "pct",
+          type: "quantitative",
+          title: "% of Total",
+          axis: { format: ".0f" },
+        },
+        color: {
+          field: "type",
+          type: "nominal",
+          title: "Competition Type",
+          scale: {
+            domain: sorted.map(([label]) => label),
+            range: typeColors,
+          },
+          legend: { orient: "bottom", columns: 3 },
+        },
+        tooltip: [
+          { field: "type", type: "nominal", title: "Type" },
+          { field: "pct", type: "quantitative", title: "Percentage", format: ".1f" },
+          { field: "value", type: "quantitative", title: "Value", format: ",.0f" },
+        ],
+      },
+    },
+  } as unknown as TopLevelSpec;
+}
+
+// ─── Chart 3: Award Timeline by Month ─────────────────────────────────────
+
+export function buildAwardTimelineSpec(
+  awards: NormalizedAward[],
+  width: number,
+  height: number,
+): TopLevelSpec {
+  // Group awards by month and competition status
+  const monthData = new Map<string, { competitive: number; nonCompetitive: number }>();
+
+  for (const award of awards) {
+    if (!award.startDate) continue;
+    // Extract YYYY-MM from the start date
+    const month = award.startDate.slice(0, 7);
+    if (!month || month.length < 7) continue;
+
+    const entry = monthData.get(month) ?? { competitive: 0, nonCompetitive: 0 };
+    const amount = Math.max(0, award.awardAmount);
+    if (isNonCompetitive(award.extentCompeted)) {
+      entry.nonCompetitive += amount;
+    } else {
+      entry.competitive += amount;
+    }
+    monthData.set(month, entry);
+  }
+
+  // Sort by month
+  const sorted = [...monthData.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  // Build flat data for stacked bar
+  const data: Array<{ month: string; amount: number; type: string }> = [];
+  for (const [month, amounts] of sorted) {
+    // Use first day of month for temporal axis
+    const dateStr = `${month}-01`;
+    if (amounts.competitive > 0) {
+      data.push({ month: dateStr, amount: amounts.competitive, type: "Competitive" });
+    }
+    if (amounts.nonCompetitive > 0) {
+      data.push({ month: dateStr, amount: amounts.nonCompetitive, type: "Non-Competitive" });
+    }
+  }
+
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    title: { text: "When Did the Money Flow?", subtitle: "Monthly award amounts by competition status" },
+    width: width,
+    height: height,
+    data: { values: data },
+    mark: { type: "bar", tooltip: true },
+    encoding: {
+      x: {
+        field: "month",
+        type: "temporal",
+        title: null,
+        timeUnit: "yearmonth",
+        axis: { format: "%b %Y", labelAngle: -45 },
+      },
+      y: {
+        field: "amount",
+        type: "quantitative",
+        title: "Award Amount",
+        stack: "zero",
+        axis: { format: "~s", labelExpr: "'$' + datum.label" },
+      },
+      color: {
+        field: "type",
+        type: "nominal",
+        title: "Competition Status",
+        scale: {
+          domain: ["Competitive", "Non-Competitive"],
+          range: [COLORS.competitive, COLORS.nonCompetitive],
+        },
+        legend: { orient: "top" },
+      },
+      tooltip: [
+        { field: "month", type: "temporal", title: "Month", timeUnit: "yearmonth", format: "%B %Y" },
+        { field: "type", type: "nominal", title: "Status" },
+        { field: "amount", type: "quantitative", title: "Amount ($)", format: ",.0f" },
+      ],
+    },
+  } as TopLevelSpec;
+}
+
+// ─── Chart 4: Material Findings by Exposure ───────────────────────────────
+
+export function buildFindingsExposureSpec(
+  findings: MaterialFinding[],
+  width: number,
+  height: number,
+): TopLevelSpec {
+  // Sort findings by dollar exposure descending, take top 16
+  const sorted = [...findings]
+    .sort((a, b) => b.totalDollarValue - a.totalDollarValue)
+    .slice(0, 16);
+
+  const indicatorNames: Record<string, string> = {
+    R001: "Single-Bid",
+    R002: "Non-Competitive",
+    R003: "Splitting",
+    R004: "Concentration",
+    R005: "Modifications",
+    R006: "Price Outlier",
   };
+
+  const data = sorted.map((f, i) => {
+    // Compose a short label: entity + indicator
+    const entityShort = f.entityName.length > 25 ? f.entityName.slice(0, 22) + "..." : f.entityName;
+    const indicLabel = indicatorNames[f.indicatorId] ?? f.indicatorId;
+    return {
+      finding: `${entityShort}`,
+      indicator: indicLabel,
+      indicatorId: f.indicatorId,
+      exposure: f.totalDollarValue,
+      label: formatDollars(f.totalDollarValue),
+      severity: f.severity,
+      sortOrder: i,
+    };
+  });
+
+  // Build indicator domain and range from what's actually in the data
+  const usedIndicators = [...new Set(data.map((d) => d.indicator))];
+  const usedColors = usedIndicators.map((name) => {
+    const id = Object.entries(indicatorNames).find(([, v]) => v === name)?.[0] ?? "";
+    return COLORS.indicators[id] ?? COLORS.neutral;
+  });
+
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    title: { text: "What Should Be Investigated?", subtitle: "Material findings ranked by dollar exposure" },
+    width: width,
+    height: Math.max(height, sorted.length * 28 + 60),
+    data: { values: data },
+    mark: { type: "bar", tooltip: true },
+    encoding: {
+      y: {
+        field: "finding",
+        type: "nominal",
+        title: null,
+        sort: { field: "sortOrder", order: "ascending" },
+        axis: { labelLimit: 280 },
+      },
+      x: {
+        field: "exposure",
+        type: "quantitative",
+        title: "Dollar Exposure",
+        axis: { format: "~s", labelExpr: "'$' + datum.label" },
+      },
+      color: {
+        field: "indicator",
+        type: "nominal",
+        title: "Indicator",
+        scale: {
+          domain: usedIndicators,
+          range: usedColors,
+        },
+        legend: { orient: "top" },
+      },
+      tooltip: [
+        { field: "finding", type: "nominal", title: "Entity" },
+        { field: "indicator", type: "nominal", title: "Indicator" },
+        { field: "exposure", type: "quantitative", title: "Exposure ($)", format: ",.0f" },
+        { field: "severity", type: "nominal", title: "Severity" },
+      ],
+    },
+  } as TopLevelSpec;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

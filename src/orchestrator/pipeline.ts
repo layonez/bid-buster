@@ -213,6 +213,7 @@ export async function runInvestigation(
       transactions: collectorResult.transactions,
       config,
       evidenceDir: caseFolder.chartsDir,
+      materialFindings,
     });
 
     if (charts.length > 0) {

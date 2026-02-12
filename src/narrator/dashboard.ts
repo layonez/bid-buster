@@ -790,7 +790,7 @@ function buildStyles(): string {
   .convergence-bar { height: 8px; background: var(--color-primary); border-radius: 4px; min-width: 4px; }
 
   /* Charts */
-  .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+  .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
   .chart-container { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; }
   .chart-desc { color: var(--color-text-muted); font-size: 0.85em; margin: 0 0 12px; }
   .chart-render { min-height: 200px; }

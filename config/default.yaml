@@ -96,12 +96,10 @@ investigator:
 
 charts:
   enabled: true
-  width: 600
+  width: 700
   height: 400
   types:
-    awardDistribution: true      # Histogram of award amounts
-    vendorConcentration: true    # Pie chart of vendor shares
-    competitionBreakdown: true   # Bar chart of competition types
-    priceOutlier: true           # Scatter plot with outliers highlighted
-    modificationTimeline: true   # Timeline of contract modifications
-    thresholdClustering: true    # Distribution near regulatory thresholds
+    topVendors: true             # Horizontal bar: top 15 vendors by $ value
+    competitionAnalysis: true    # Grouped bar: competition breakdown by count + dollars
+    awardTimeline: true          # Monthly stacked bar: spending over time
+    findingsExposure: true       # Horizontal bar: material findings by $ exposure

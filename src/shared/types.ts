@@ -131,12 +131,10 @@ export interface InvestigationContext {
 // ─── Chart Types ────────────────────────────────────────────────────────────
 
 export type ChartType =
-  | "award-distribution"
-  | "vendor-concentration"
-  | "competition-breakdown"
-  | "price-outlier"
-  | "modification-timeline"
-  | "threshold-clustering";
+  | "top-vendors"
+  | "competition-analysis"
+  | "award-timeline"
+  | "findings-exposure";
 
 export interface ChartArtifact {
   id: string;
