@@ -1,0 +1,51 @@
+[
+  {
+    "id": "F-R002-FAMIL-ENDEA-NONCOMP",
+    "entityName": "FAMILY ENDEAVORS, INC.",
+    "indicatorId": "R002",
+    "indicatorName": "Non-Competitive Awards",
+    "severity": "high",
+    "materialityScore": 27911961.254062045,
+    "totalDollarValue": 2013664365.4,
+    "signalCount": 1,
+    "affectedAwardIds": [
+      "75ACF122C00016",
+      "75ACF121P00005",
+      "75ACF121C00015"
+    ],
+    "signals": [
+      {
+        "indicatorId": "R002",
+        "indicatorName": "Non-Competitive Awards",
+        "severity": "high",
+        "entityType": "recipient",
+        "entityId": "FAMILY ENDEAVORS, INC.",
+        "entityName": "FAMILY ENDEAVORS, INC.",
+        "value": 100,
+        "threshold": 50,
+        "context": "3 of 3 awards (100.0%) to FAMILY ENDEAVORS, INC. were non-competitive. Non-competed amount: $2,013,664,365.4 (100.0% of total).",
+        "affectedAwards": [
+          "75ACF122C00016",
+          "75ACF121P00005",
+          "75ACF121C00015"
+        ]
+      }
+    ],
+    "fiveCs": {
+      "condition": "100.0% of awards (by count) to FAMILY ENDEAVORS, INC. were non-competitive, totaling $2,013,664,365.4 across 3 awards.",
+      "criteria": "FAR 6.302 permits non-competitive procurement only under specific circumstances (sole source, urgency, national security). OECD Guidelines (2025) flag persistent non-competitive patterns as a procurement integrity indicator.",
+      "cause": "Non-competitive awards may reflect unique capabilities (e.g., FFRDC, UARC status), legitimate sole-source justifications, or habitual use of non-competitive mechanisms without adequate market research.",
+      "effect": "$2,013,664,365.4 in awards bypassed competition. While individual justifications may be valid, the cumulative pattern reduces the transparency and competitiveness of the procurement portfolio.",
+      "recommendation": "Verify sole-source justifications (J&A documentation) for the largest non-competitive awards. Check entity type via SAM.gov (FFRDC/UARC status may explain the pattern). Consider whether market research could identify additional qualified sources."
+    },
+    "source": "signal_consolidation",
+    "aiTag": "RULE",
+    "entityContext": {
+      "naicsDescription": "CHILD AND YOUTH SERVICES",
+      "setAsideType": "NONE",
+      "totalAwardsInDataset": 3,
+      "firstAwardDate": "2021-03-17",
+      "lastAwardDate": "2022-05-16"
+    }
+  }
+]

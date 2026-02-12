@@ -1,0 +1,27 @@
+[
+  {
+    "id": "E-F-R002-FAMIL-ENDEA-NONCOMP-breakdown",
+    "hypothesisId": "F-R002-FAMIL-ENDEA-NONCOMP",
+    "type": "csv",
+    "title": "Competition Type Breakdown",
+    "description": "Breakdown of 3 awards by competition type code with dollar amounts.",
+    "filePath": "evidence/summary/F-R002-FAMIL-ENDEA-NONCOMP-competition-breakdown.csv",
+    "metadata": {
+      "totalAwards": 3,
+      "competitionTypes": 2,
+      "signalCount": 1
+    }
+  },
+  {
+    "id": "E-F-R002-FAMIL-ENDEA-NONCOMP-detail",
+    "hypothesisId": "F-R002-FAMIL-ENDEA-NONCOMP",
+    "type": "csv",
+    "title": "Non-Competed Awards Detail",
+    "description": "3 non-competed awards sorted by amount.",
+    "filePath": "evidence/summary/F-R002-FAMIL-ENDEA-NONCOMP-non-competed-awards.csv",
+    "metadata": {
+      "nonCompetedCount": 3,
+      "totalNonCompetedAmount": 2013664365.4
+    }
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "H-EXECUTIVE",
+    "signalIds": [
+      "R002"
+    ],
+    "question": "What do these signals collectively suggest?",
+    "context": "Between January 2021 and December 2022, the Department of Health and Human Services awarded Family Endeavors, Inc. three contracts totaling approximately $2.01 billion, with all three awards executed through non-competitive procedures. This procurement pattern represents 100% non-competitive contracting with a single vendor over the two-year period, a level of sole-source reliance that warrants additional review of the justification documentation and competitive feasibility assessments. The dollar magnitude—exceeding $2 billion—and complete absence of competitive awards in this vendor relationship suggests this case merits examination of whether emergency authorities or unique capability determinations were appropriately applied. This screening identifies the pattern for further administrative review to ensure compliance with federal competition requirements.",
+    "evidenceNeeded": [
+      "Cross-reference all evidence artifacts below"
+    ],
+    "severity": "high"
+  },
+  {
+    "id": "H-R002-FAMILY E",
+    "signalIds": [
+      "R002"
+    ],
+    "question": "Does the pattern of non-competitive awards to FAMILY ENDEAVORS, INC. warrant closer examination?",
+    "context": "**Refined Analysis:**\n\nAll three awards to Family Endeavors, Inc., totaling approximately $2.01 billion, were executed non-competitively, representing 100% of the contracting portfolio with this vendor. This concentration could reflect legitimate urgent operational needs—such as emergency humanitarian services requiring immediate mobilization of established providers with specialized facilities and clearances—or statutory authorities permitting sole-source awards under specific circumstances. However, the pattern raises questions about whether competitive alternatives were adequately explored, particularly for follow-on awards, or if market research identified this vendor as genuinely unique across all three procurements. \n\n**Recommended Next Steps:** Reviewers should examine the Justification & Approval (J&A) documentation for each award to verify the stated rationale, assess whether urgency or unique capability claims were substantiated, and determine if the procuring agency conducted periodic market research to confirm ongoing lack of viable competitors.",
+    "evidenceNeeded": [
+      "Breakdown of non-competed awards by justification code",
+      "Dollar distribution of competed vs non-competed awards",
+      "Comparison of non-competitive rate with agency average"
+    ],
+    "severity": "high",
+    "aiEnhanced": true
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-02-12T22:04:25.782Z",
+  "toolVersion": "0.1.0",
+  "gitCommit": "5ddf8bce162a7afe61265fe5e0f706f40888699c",
+  "nodeVersion": "v20.19.4",
+  "parameters": {
+    "agency": "Department of Health and Human Services",
+    "recipient": "Family Endeavors",
+    "periodStart": "2021-01-01",
+    "periodEnd": "2022-12-31",
+    "outputDir": "./cases",
+    "awardTypeCodes": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  },
+  "dataSources": [
+    {
+      "name": "USAspending API",
+      "endpoint": "https://api.usaspending.gov/api/v2",
+      "snapshotDate": "2026-02-12",
+      "recordCount": 3,
+      "cacheHit": true
+    }
+  ],
+  "fileHashes": {
+    "signals.json": "eaea6a6f8a2b123bc21cb94f1f45c3ce3e6dfe54f1ae90bde95504e40c5adfa2",
+    "findings.json": "642b3c234139362cada08c0a84a4d321f8c74a408319e137385ce78abf2e9642"
+  }
+}

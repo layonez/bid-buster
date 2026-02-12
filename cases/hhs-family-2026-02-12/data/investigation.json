@@ -1,0 +1,661 @@
+{
+  "enrichedHypotheses": [
+    {
+      "hypothesisId": "H-R002-FAMILY E",
+      "originalQuestion": "Does the pattern of non-competitive awards to FAMILY ENDEAVORS, INC. warrant closer examination?",
+      "enrichedContext": "Investigation reached maximum iterations without final assessment",
+      "innocentExplanations": [],
+      "additionalEvidence": [],
+      "confidenceAdjustment": "unchanged",
+      "reasoning": "Max iterations reached"
+    }
+  ],
+  "crossReferences": [],
+  "toolCallLog": [
+    {
+      "toolName": "log_reasoning",
+      "input": {
+        "phase": "hypothesis",
+        "reasoning": "The dataset shows 3 awards totaling over $2 billion to FAMILY ENDEAVORS, INC., all non-competitive, from a single agency. The entity context mentions \"CHILD AND YOUTH SERVICES\" which suggests HHS/ACF (Administration for Children and Families) based on the award ID prefix \"75ACF\". This is an extraordinarily large sum for a single nonprofit entity receiving sole-source awards. Key questions:\n1. What is FAMILY ENDEAVORS, INC.? Is it a legitimate social services organization? What is its SAM.gov registration status?\n2. What are these specific awards for? The timing (2021-2022) coincides with the migrant surge at the US-Mexico border and potential emergency shelter needs.\n3. Is $2B reasonable for this type of work? Were there emergency/urgency justifications?\n4. Are there sub-awards showing pass-through to other organizations?\n5. Does this entity appear on any sanctions or exclusion lists?\n6. What do comparable awards look like — do other entities receive similar non-competitive awards from ACF?\n\nInitial assessment: The 100% non-competitive rate and $2B value are significant red flags on their face, but the timing and agency context (ACF during the 2021 border surge) may provide legitimate justification. Family Endeavors was widely reported in media as receiving emergency contracts for migrant shelter services.",
+        "related_signals": [
+          "R002"
+        ],
+        "related_entities": [
+          "FAMILY ENDEAVORS, INC."
+        ]
+      },
+      "output": {
+        "logged": true,
+        "stepIndex": 0
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:02:42.696Z"
+    },
+    {
+      "toolName": "verify_entity",
+      "input": {
+        "name": "FAMILY ENDEAVORS, INC.",
+        "check_exclusions": true
+      },
+      "output": {
+        "entity": {
+          "data": null,
+          "provenance": {
+            "source": "sam_gov",
+            "endpoint": "https://api.sam.gov/entity-information/v3/entities",
+            "timestamp": "2026-02-12T22:02:51.098Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          },
+          "errors": [
+            "Rate limited (429)"
+          ]
+        },
+        "exclusions": {
+          "data": [],
+          "provenance": {
+            "source": "sam_gov",
+            "endpoint": "https://api.sam.gov/entity-information/v4/exclusions",
+            "timestamp": "2026-02-12T22:02:55.432Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          },
+          "errors": [
+            "Rate limited (429)"
+          ]
+        }
+      },
+      "durationMs": 8053,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:02:47.379Z"
+    },
+    {
+      "toolName": "screen_sanctions",
+      "input": {
+        "name": "Family Endeavors Inc",
+        "schema": "Company",
+        "dataset": "default"
+      },
+      "output": {
+        "result": {
+          "data": {
+            "query": "Family Endeavors Inc",
+            "matchFound": false,
+            "score": 0,
+            "datasets": [],
+            "topics": []
+          },
+          "provenance": {
+            "source": "open_sanctions",
+            "endpoint": "https://api.opensanctions.org/match/default",
+            "timestamp": "2026-02-12T22:02:56.018Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          }
+        }
+      },
+      "durationMs": 586,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:02:55.432Z"
+    },
+    {
+      "toolName": "lookup_award_detail",
+      "input": {
+        "award_id": "75ACF122C00016"
+      },
+      "output": {
+        "award": {
+          "awardId": "75ACF122C00016",
+          "internalId": "CONT_AWD_75ACF122C00016_7590_-NONE-_-NONE-",
+          "recipientName": "FAMILY ENDEAVORS, INC.",
+          "recipientUei": "PC1AM3TAQXD8",
+          "recipientId": "145a4154-d747-d57b-bd6a-5c438e9f82d5-C",
+          "awardingAgency": "Department of Health and Human Services",
+          "awardingSubAgency": "Administration for Children and Families",
+          "fundingAgency": "Department of Health and Human Services",
+          "awardAmount": 1298999990.07,
+          "awardType": "DEFINITIVE CONTRACT",
+          "naicsCode": "624110",
+          "description": "INFLUX CARE FACILITY (ICF) SITE IN PECOS, TX FOR THE U.S. DEPARTMENT OF HEALTH AND HUMAN SERVICES (HHS), ADMINISTRATION FOR CHILDREN AND FAMILIES (ACF), OFFICE OF REFUGEE RESETTLEMENT (ORR)",
+          "startDate": "2022-05-16",
+          "endDate": "2023-11-15",
+          "totalObligation": 1298999990.07,
+          "baseExercisedOptions": 1298999990.07,
+          "baseAndAllOptions": 1981749937.38,
+          "extentCompeted": "C",
+          "extentCompetedDescription": "NOT COMPETED",
+          "numberOfOffersReceived": 1,
+          "solicitationProcedures": "SSS",
+          "otherThanFullAndOpen": "UNQ",
+          "typeOfContractPricing": "J",
+          "typeOfContractPricingDescription": "FIRM FIXED PRICE",
+          "fedBizOpps": "X",
+          "typeSetAside": "NONE",
+          "naicsDescription": "CHILD AND YOUTH SERVICES",
+          "lastModifiedDate": "2024-10-23"
+        },
+        "source": "in-memory dataset"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:02:56.018Z"
+    },
+    {
+      "toolName": "lookup_award_detail",
+      "input": {
+        "award_id": "75ACF121P00005"
+      },
+      "output": {
+        "award": {
+          "awardId": "75ACF121P00005",
+          "internalId": "CONT_AWD_75ACF121P00005_7590_-NONE-_-NONE-",
+          "recipientName": "FAMILY ENDEAVORS, INC.",
+          "recipientUei": "PC1AM3TAQXD8",
+          "recipientId": "145a4154-d747-d57b-bd6a-5c438e9f82d5-C",
+          "awardingAgency": "Department of Health and Human Services",
+          "awardingSubAgency": "Administration for Children and Families",
+          "fundingAgency": "Department of Health and Human Services",
+          "awardAmount": 713907435.33,
+          "awardType": "PURCHASE ORDER",
+          "naicsCode": "624110",
+          "description": "THE PURPOSE OF THIS ORDER IS TO AWARD EMERGENCY INTAKE SITE AND WRAP AROUND CARE SERVICES IN SUPPORT OF THE ORR UNACCOMPANIED CHILDREN'S PROGRAM; THE FACILITY IS LOCATED IN PECOS, TX.",
+          "startDate": "2021-03-17",
+          "endDate": "2025-02-03",
+          "totalObligation": 713907435.33,
+          "baseExercisedOptions": 713907435.33,
+          "baseAndAllOptions": 795357967.25,
+          "extentCompeted": "G",
+          "extentCompetedDescription": "NOT COMPETED UNDER SAP",
+          "numberOfOffersReceived": 1,
+          "solicitationProcedures": "SP1",
+          "otherThanFullAndOpen": "SP2",
+          "typeOfContractPricing": "J",
+          "typeOfContractPricingDescription": "FIRM FIXED PRICE",
+          "fedBizOpps": "N",
+          "typeSetAside": "NONE",
+          "naicsDescription": "CHILD AND YOUTH SERVICES",
+          "lastModifiedDate": "2025-02-26"
+        },
+        "source": "in-memory dataset"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:02:56.018Z"
+    },
+    {
+      "toolName": "lookup_award_detail",
+      "input": {
+        "award_id": "75ACF121C00015"
+      },
+      "output": {
+        "award": {
+          "awardId": "75ACF121C00015",
+          "internalId": "CONT_AWD_75ACF121C00015_7590_-NONE-_-NONE-",
+          "recipientName": "FAMILY ENDEAVORS, INC.",
+          "recipientUei": "PC1AM3TAQXD8",
+          "recipientId": "145a4154-d747-d57b-bd6a-5c438e9f82d5-C",
+          "awardingAgency": "Department of Health and Human Services",
+          "awardingSubAgency": "Administration for Children and Families",
+          "fundingAgency": "Department of Health and Human Services",
+          "awardAmount": 756940,
+          "awardType": "DEFINITIVE CONTRACT",
+          "naicsCode": "624230",
+          "description": "THE CONTRACTOR SHALL PROVIDE 20 YOUTH CARE WORKERS (YCW) WHO WILL PROVIDE DIRECT SUPERVISION OF CHILDREN IN-CARE AND MAINTAIN LINE-OF-SIGHT AT ALL TIMES. YCW ASSIST MINORS IN ACTIVITIES AND PROGRAMMING AS WELL AS CULTIVATE A SAFE, HEALTHY, THERAPEUTI",
+          "startDate": "2021-03-19",
+          "endDate": "2021-06-02",
+          "totalObligation": 756940,
+          "baseExercisedOptions": 756940,
+          "baseAndAllOptions": 756940,
+          "extentCompeted": "C",
+          "extentCompetedDescription": "NOT COMPETED",
+          "numberOfOffersReceived": 1,
+          "solicitationProcedures": "SSS",
+          "otherThanFullAndOpen": "URG",
+          "typeOfContractPricing": "J",
+          "typeOfContractPricingDescription": "FIRM FIXED PRICE",
+          "fedBizOpps": "X",
+          "typeSetAside": "NONE",
+          "naicsDescription": "EMERGENCY AND OTHER RELIEF SERVICES",
+          "lastModifiedDate": "2024-06-26"
+        },
+        "source": "in-memory dataset"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:02:56.018Z"
+    },
+    {
+      "toolName": "log_reasoning",
+      "input": {
+        "phase": "analysis",
+        "reasoning": "Excellent — the award details reveal critical context:\n\n1. **Award 75ACF122C00016** ($1.3B): Influx Care Facility in Pecos, TX for ORR. Not competed, justification: \"UNQ\" (unique source). This is the largest award. Start date May 2022, appears to be a follow-on.\n\n2. **Award 75ACF121P00005** ($714M): Emergency Intake Site and wraparound care for ORR Unaccompanied Children's Program in Pecos, TX. Not competed under SAP, justification: \"SP2\" (unusual and compelling urgency per SAP). Started March 2021 — this aligns exactly with the spring 2021 border surge.\n\n3. **Award 75ACF121C00015** ($757K): 20 Youth Care Workers for direct supervision of children. Not competed, justification: \"URG\" (urgency). Very short period (March-June 2021). This was clearly an emergency staffing need.\n\nKey observations:\n- All awards relate to HHS/ACF Office of Refugee Resettlement (ORR) unaccompanied children program\n- Pecos, TX location is consistent with the well-documented 2021 border crisis emergency facilities\n- The justifications vary: urgency (URG), unique source (UNQ), and SAP urgency (SP2)\n- The progression suggests: emergency start (March 2021 small staffing contract + larger purchase order), then a follow-on definitive contract in 2022\n- Sanctions screening: NO match found — clean\n- SAM.gov: Rate limited, need to retry\n- NAICS codes: 624110 (Child and Youth Services) and 624230 (Emergency and Other Relief Services)\n\nThe pattern of non-competition has a plausible explanation: these were emergency procurements during the 2021 unaccompanied minor crisis. However, the follow-on in 2022 for $1.3B using \"unique source\" rather than urgency is worth examining — by May 2022, the initial urgency may have subsided enough to allow competition.\n\nI need to:\n1. Retry SAM.gov entity verification\n2. Look at sub-awards for the large contracts\n3. Find comparable awards to benchmark — did other ORR emergency shelter providers also get non-competitive awards?",
+        "related_signals": [
+          "R002"
+        ],
+        "related_entities": [
+          "FAMILY ENDEAVORS, INC."
+        ]
+      },
+      "output": {
+        "logged": true,
+        "stepIndex": 1
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:10.146Z"
+    },
+    {
+      "toolName": "verify_entity",
+      "input": {
+        "uei": "PC1AM3TAQXD8",
+        "check_exclusions": true
+      },
+      "output": {
+        "entity": {
+          "data": null,
+          "provenance": {
+            "source": "sam_gov",
+            "endpoint": "https://api.sam.gov/entity-information/v3/entities",
+            "timestamp": "2026-02-12T22:03:20.494Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          },
+          "errors": [
+            "Rate limited (429)"
+          ]
+        }
+      },
+      "durationMs": 3638,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:16.856Z"
+    },
+    {
+      "toolName": "fetch_subawards",
+      "input": {
+        "award_id": "CONT_AWD_75ACF122C00016_7590_-NONE-_-NONE-",
+        "limit": 50
+      },
+      "output": {
+        "subawards": {
+          "data": [],
+          "provenance": {
+            "source": "usaspending_subawards",
+            "endpoint": "https://api.usaspending.gov/api/v2/subawards/",
+            "timestamp": "2026-02-12T22:03:21.307Z",
+            "cacheHit": false,
+            "apiKeyUsed": false
+          }
+        }
+      },
+      "durationMs": 813,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:20.494Z"
+    },
+    {
+      "toolName": "fetch_subawards",
+      "input": {
+        "award_id": "CONT_AWD_75ACF121P00005_7590_-NONE-_-NONE-",
+        "limit": 50
+      },
+      "output": {
+        "subawards": {
+          "data": [],
+          "provenance": {
+            "source": "usaspending_subawards",
+            "endpoint": "https://api.usaspending.gov/api/v2/subawards/",
+            "timestamp": "2026-02-12T22:03:21.506Z",
+            "cacheHit": false,
+            "apiKeyUsed": false
+          }
+        }
+      },
+      "durationMs": 199,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:21.307Z"
+    },
+    {
+      "toolName": "fetch_comparable_awards",
+      "input": {
+        "naics_code": "624110",
+        "agency": "Department of Health and Human Services",
+        "exclude_recipient": "FAMILY ENDEAVORS, INC.",
+        "period_start": "2021-01-01",
+        "period_end": "2023-01-01",
+        "limit": 25
+      },
+      "output": {
+        "awards": [],
+        "totalFound": 0,
+        "source": "in-memory dataset"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:21.506Z"
+    },
+    {
+      "toolName": "fetch_comparable_awards",
+      "input": {
+        "naics_code": "624230",
+        "agency": "Department of Health and Human Services",
+        "period_start": "2021-01-01",
+        "period_end": "2023-01-01",
+        "limit": 25
+      },
+      "output": {
+        "awards": [
+          {
+            "awardId": "75ACF121C00015",
+            "recipientName": "FAMILY ENDEAVORS, INC.",
+            "agency": "Department of Health and Human Services",
+            "amount": 756940,
+            "extentCompeted": "C",
+            "naicsCode": "624230"
+          }
+        ],
+        "totalFound": 1,
+        "source": "in-memory dataset"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:21.506Z"
+    },
+    {
+      "toolName": "log_reasoning",
+      "input": {
+        "phase": "analysis",
+        "reasoning": "Sub-award data returned empty for both large contracts. This could mean:\n1. Sub-award reporting was not required or not yet submitted\n2. Family Endeavors performed the work directly without significant subcontracting\n3. Data reporting gaps (sub-award reporting has known coverage limitations)\n\nThe lack of sub-award data is itself notable for contracts of this magnitude ($1.3B and $714M). For contracts this large, it would be unusual for there to be zero subcontractors, suggesting either a reporting gap or that the entity was performing extensive direct services.\n\nSAM.gov is still rate-limited. The comparable awards search returned no results from the in-memory dataset (which only contains 3 awards), so I need to broaden my search. Let me try the USAspending API for broader comparable data.\n\nLet me also check the statistical patterns in the dataset and try a broader comparable search.",
+        "related_signals": [
+          "R002"
+        ],
+        "related_entities": [
+          "FAMILY ENDEAVORS, INC."
+        ]
+      },
+      "output": {
+        "logged": true,
+        "stepIndex": 2
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:29.770Z"
+    },
+    {
+      "toolName": "analyze_statistical_pattern",
+      "input": {
+        "field": "awardAmount",
+        "method": "distribution",
+        "group_by": "extentCompeted"
+      },
+      "output": {
+        "field": "awardAmount",
+        "groupBy": "extentCompeted",
+        "method": "distribution",
+        "results": [
+          {
+            "group": "C",
+            "value": 2,
+            "count": 2,
+            "details": {
+              "756940": 1,
+              "1298999990.07": 1
+            }
+          },
+          {
+            "group": "G",
+            "value": 1,
+            "count": 1,
+            "details": {
+              "713907435.33": 1
+            }
+          }
+        ],
+        "summary": "Analyzed 3 awards, field=\"awardAmount\", method=\"distribution\", 2 group(s)"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:34.220Z"
+    },
+    {
+      "toolName": "analyze_statistical_pattern",
+      "input": {
+        "field": "awardAmount",
+        "method": "zscore"
+      },
+      "output": {
+        "field": "awardAmount",
+        "method": "zscore",
+        "results": [
+          {
+            "group": "all",
+            "value": 0,
+            "count": 3,
+            "details": {
+              "mean": 671221455.1333333,
+              "stdDev": 530864278.91554147,
+              "outlierCount": 0
+            }
+          }
+        ],
+        "summary": "Analyzed 3 awards, field=\"awardAmount\", method=\"zscore\", 1 group(s)"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:34.220Z"
+    },
+    {
+      "toolName": "fetch_comparable_awards",
+      "input": {
+        "naics_code": "624110",
+        "period_start": "2021-01-01",
+        "period_end": "2023-01-01",
+        "exclude_recipient": "FAMILY ENDEAVORS, INC.",
+        "limit": 25
+      },
+      "output": {
+        "awards": [],
+        "totalFound": 0,
+        "source": "in-memory dataset"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:34.220Z"
+    },
+    {
+      "toolName": "log_reasoning",
+      "input": {
+        "phase": "analysis",
+        "reasoning": "The comparable awards search returns no results because it's searching the in-memory dataset which only contains these 3 awards. The statistical analysis confirms:\n- All 3 awards are non-competitive (2 coded \"C\" = Not Competed, 1 coded \"G\" = Not Competed under SAP)\n- Mean award amount is $671M with high standard deviation ($531M)\n- No statistical outliers flagged within this small 3-award dataset (too few data points)\n\nLet me try one more time with SAM.gov and also attempt a broader comparable search with different parameters. I also want to note what I've learned from the award details about the justification codes:\n\nAward progression:\n1. March 2021: $757K for 20 Youth Care Workers (URG - urgency) - 75-day period\n2. March 2021: $714M for Emergency Intake Site and wrap-around care (SP2 - SAP urgency) - extended to Feb 2025\n3. May 2022: $1.3B for Influx Care Facility continuation (UNQ - unique source) - through Nov 2023\n\nThe shift from \"urgency\" to \"unique source\" justification between 2021 and 2022 is analytically significant. By 2022, the initial emergency justification may have been harder to sustain, so the justification shifted to \"only one responsible source\" — potentially because Family Endeavors had already established the facility and built institutional knowledge, making them the de facto sole source.\n\nThis is a well-documented pattern in government contracting: emergency awards create incumbency advantages that perpetuate non-competitive follow-ons. The question is whether ACF made adequate efforts to transition to competitive procurement.",
+        "related_signals": [
+          "R002"
+        ],
+        "related_entities": [
+          "FAMILY ENDEAVORS, INC."
+        ]
+      },
+      "output": {
+        "logged": true,
+        "stepIndex": 3
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:45.415Z"
+    },
+    {
+      "toolName": "verify_entity",
+      "input": {
+        "name": "FAMILY ENDEAVORS",
+        "check_exclusions": true
+      },
+      "output": {
+        "entity": {
+          "data": null,
+          "provenance": {
+            "source": "sam_gov",
+            "endpoint": "https://api.sam.gov/entity-information/v3/entities",
+            "timestamp": "2026-02-12T22:03:52.103Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          },
+          "errors": [
+            "Rate limited (429)"
+          ]
+        },
+        "exclusions": {
+          "data": [],
+          "provenance": {
+            "source": "sam_gov",
+            "endpoint": "https://api.sam.gov/entity-information/v4/exclusions",
+            "timestamp": "2026-02-12T22:03:56.354Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          },
+          "errors": [
+            "Rate limited (429)"
+          ]
+        }
+      },
+      "durationMs": 7877,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:48.477Z"
+    },
+    {
+      "toolName": "analyze_statistical_pattern",
+      "input": {
+        "field": "awardAmount",
+        "method": "concentration",
+        "group_by": "recipientName"
+      },
+      "output": {
+        "field": "awardAmount",
+        "groupBy": "recipientName",
+        "method": "concentration",
+        "results": [
+          {
+            "group": "FAMILY ENDEAVORS, INC.",
+            "value": 0.5418371897303785,
+            "count": 3,
+            "details": {
+              "hhi": 0.5418371897303785,
+              "totalValue": 2013664365.4,
+              "topShare": 0.6450926045026192
+            }
+          }
+        ],
+        "summary": "Analyzed 3 awards, field=\"awardAmount\", method=\"concentration\", 1 group(s)"
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:03:56.354Z"
+    },
+    {
+      "toolName": "log_reasoning",
+      "input": {
+        "phase": "analysis",
+        "reasoning": "SAM.gov continues to be rate-limited, so I cannot verify the entity registration. However, I can note that:\n- The exclusions search also returned empty/rate-limited, not a positive hit\n- The sanctions screening returned NO match (score: 0)\n- The concentration analysis shows HHI of 0.54 (which is expected since there's only 1 recipient in this dataset — HHI = 1.0 for a monopoly, so 0.54 represents the distribution across the 3 awards by size)\n\nLet me now attempt to summarize what I know and create formal findings. Let me also try one more entity search approach.",
+        "related_signals": [
+          "R002"
+        ],
+        "related_entities": [
+          "FAMILY ENDEAVORS, INC."
+        ]
+      },
+      "output": {
+        "logged": true,
+        "stepIndex": 4
+      },
+      "durationMs": 0,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:04:02.500Z"
+    },
+    {
+      "toolName": "screen_sanctions",
+      "input": {
+        "name": "Family Endeavors",
+        "schema": "Company",
+        "dataset": "us_sanctions"
+      },
+      "output": {
+        "result": {
+          "data": {
+            "query": "Family Endeavors",
+            "matchFound": false,
+            "score": 0,
+            "datasets": [],
+            "topics": []
+          },
+          "provenance": {
+            "source": "open_sanctions",
+            "endpoint": "https://api.opensanctions.org/match/default",
+            "timestamp": "2026-02-12T22:04:05.725Z",
+            "cacheHit": false,
+            "apiKeyUsed": true
+          }
+        }
+      },
+      "durationMs": 206,
+      "cacheHit": false,
+      "timestamp": "2026-02-12T22:04:05.519Z"
+    }
+  ],
+  "iterations": 10,
+  "estimatedCostUsd": 1.4401799999999998,
+  "summary": "Investigation completed after 10 iterations (max iterations reached). 21 tool calls executed.",
+  "reasoningSteps": [
+    {
+      "timestamp": "2026-02-12T22:02:42.696Z",
+      "phase": "hypothesis",
+      "reasoning": "The dataset shows 3 awards totaling over $2 billion to FAMILY ENDEAVORS, INC., all non-competitive, from a single agency. The entity context mentions \"CHILD AND YOUTH SERVICES\" which suggests HHS/ACF (Administration for Children and Families) based on the award ID prefix \"75ACF\". This is an extraordinarily large sum for a single nonprofit entity receiving sole-source awards. Key questions:\n1. What is FAMILY ENDEAVORS, INC.? Is it a legitimate social services organization? What is its SAM.gov registration status?\n2. What are these specific awards for? The timing (2021-2022) coincides with the migrant surge at the US-Mexico border and potential emergency shelter needs.\n3. Is $2B reasonable for this type of work? Were there emergency/urgency justifications?\n4. Are there sub-awards showing pass-through to other organizations?\n5. Does this entity appear on any sanctions or exclusion lists?\n6. What do comparable awards look like — do other entities receive similar non-competitive awards from ACF?\n\nInitial assessment: The 100% non-competitive rate and $2B value are significant red flags on their face, but the timing and agency context (ACF during the 2021 border surge) may provide legitimate justification. Family Endeavors was widely reported in media as receiving emergency contracts for migrant shelter services.",
+      "relatedSignals": [
+        "R002"
+      ],
+      "relatedEntities": [
+        "FAMILY ENDEAVORS, INC."
+      ]
+    },
+    {
+      "timestamp": "2026-02-12T22:03:10.146Z",
+      "phase": "analysis",
+      "reasoning": "Excellent — the award details reveal critical context:\n\n1. **Award 75ACF122C00016** ($1.3B): Influx Care Facility in Pecos, TX for ORR. Not competed, justification: \"UNQ\" (unique source). This is the largest award. Start date May 2022, appears to be a follow-on.\n\n2. **Award 75ACF121P00005** ($714M): Emergency Intake Site and wraparound care for ORR Unaccompanied Children's Program in Pecos, TX. Not competed under SAP, justification: \"SP2\" (unusual and compelling urgency per SAP). Started March 2021 — this aligns exactly with the spring 2021 border surge.\n\n3. **Award 75ACF121C00015** ($757K): 20 Youth Care Workers for direct supervision of children. Not competed, justification: \"URG\" (urgency). Very short period (March-June 2021). This was clearly an emergency staffing need.\n\nKey observations:\n- All awards relate to HHS/ACF Office of Refugee Resettlement (ORR) unaccompanied children program\n- Pecos, TX location is consistent with the well-documented 2021 border crisis emergency facilities\n- The justifications vary: urgency (URG), unique source (UNQ), and SAP urgency (SP2)\n- The progression suggests: emergency start (March 2021 small staffing contract + larger purchase order), then a follow-on definitive contract in 2022\n- Sanctions screening: NO match found — clean\n- SAM.gov: Rate limited, need to retry\n- NAICS codes: 624110 (Child and Youth Services) and 624230 (Emergency and Other Relief Services)\n\nThe pattern of non-competition has a plausible explanation: these were emergency procurements during the 2021 unaccompanied minor crisis. However, the follow-on in 2022 for $1.3B using \"unique source\" rather than urgency is worth examining — by May 2022, the initial urgency may have subsided enough to allow competition.\n\nI need to:\n1. Retry SAM.gov entity verification\n2. Look at sub-awards for the large contracts\n3. Find comparable awards to benchmark — did other ORR emergency shelter providers also get non-competitive awards?",
+      "relatedSignals": [
+        "R002"
+      ],
+      "relatedEntities": [
+        "FAMILY ENDEAVORS, INC."
+      ]
+    },
+    {
+      "timestamp": "2026-02-12T22:03:29.770Z",
+      "phase": "analysis",
+      "reasoning": "Sub-award data returned empty for both large contracts. This could mean:\n1. Sub-award reporting was not required or not yet submitted\n2. Family Endeavors performed the work directly without significant subcontracting\n3. Data reporting gaps (sub-award reporting has known coverage limitations)\n\nThe lack of sub-award data is itself notable for contracts of this magnitude ($1.3B and $714M). For contracts this large, it would be unusual for there to be zero subcontractors, suggesting either a reporting gap or that the entity was performing extensive direct services.\n\nSAM.gov is still rate-limited. The comparable awards search returned no results from the in-memory dataset (which only contains 3 awards), so I need to broaden my search. Let me try the USAspending API for broader comparable data.\n\nLet me also check the statistical patterns in the dataset and try a broader comparable search.",
+      "relatedSignals": [
+        "R002"
+      ],
+      "relatedEntities": [
+        "FAMILY ENDEAVORS, INC."
+      ]
+    },
+    {
+      "timestamp": "2026-02-12T22:03:45.415Z",
+      "phase": "analysis",
+      "reasoning": "The comparable awards search returns no results because it's searching the in-memory dataset which only contains these 3 awards. The statistical analysis confirms:\n- All 3 awards are non-competitive (2 coded \"C\" = Not Competed, 1 coded \"G\" = Not Competed under SAP)\n- Mean award amount is $671M with high standard deviation ($531M)\n- No statistical outliers flagged within this small 3-award dataset (too few data points)\n\nLet me try one more time with SAM.gov and also attempt a broader comparable search with different parameters. I also want to note what I've learned from the award details about the justification codes:\n\nAward progression:\n1. March 2021: $757K for 20 Youth Care Workers (URG - urgency) - 75-day period\n2. March 2021: $714M for Emergency Intake Site and wrap-around care (SP2 - SAP urgency) - extended to Feb 2025\n3. May 2022: $1.3B for Influx Care Facility continuation (UNQ - unique source) - through Nov 2023\n\nThe shift from \"urgency\" to \"unique source\" justification between 2021 and 2022 is analytically significant. By 2022, the initial emergency justification may have been harder to sustain, so the justification shifted to \"only one responsible source\" — potentially because Family Endeavors had already established the facility and built institutional knowledge, making them the de facto sole source.\n\nThis is a well-documented pattern in government contracting: emergency awards create incumbency advantages that perpetuate non-competitive follow-ons. The question is whether ACF made adequate efforts to transition to competitive procurement.",
+      "relatedSignals": [
+        "R002"
+      ],
+      "relatedEntities": [
+        "FAMILY ENDEAVORS, INC."
+      ]
+    },
+    {
+      "timestamp": "2026-02-12T22:04:02.500Z",
+      "phase": "analysis",
+      "reasoning": "SAM.gov continues to be rate-limited, so I cannot verify the entity registration. However, I can note that:\n- The exclusions search also returned empty/rate-limited, not a positive hit\n- The sanctions screening returned NO match (score: 0)\n- The concentration analysis shows HHI of 0.54 (which is expected since there's only 1 recipient in this dataset — HHI = 1.0 for a monopoly, so 0.54 represents the distribution across the 3 awards by size)\n\nLet me now attempt to summarize what I know and create formal findings. Let me also try one more entity search approach.",
+      "relatedSignals": [
+        "R002"
+      ],
+      "relatedEntities": [
+        "FAMILY ENDEAVORS, INC."
+      ]
+    }
+  ]
+}

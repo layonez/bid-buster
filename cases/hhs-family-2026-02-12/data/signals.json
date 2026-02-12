@@ -1,0 +1,122 @@
+{
+  "signals": [
+    {
+      "indicatorId": "R002",
+      "indicatorName": "Non-Competitive Awards",
+      "severity": "high",
+      "entityType": "recipient",
+      "entityId": "FAMILY ENDEAVORS, INC.",
+      "entityName": "FAMILY ENDEAVORS, INC.",
+      "value": 100,
+      "threshold": 50,
+      "context": "3 of 3 awards (100.0%) to FAMILY ENDEAVORS, INC. were non-competitive. Non-competed amount: $2,013,664,365.4 (100.0% of total).",
+      "affectedAwards": [
+        "75ACF122C00016",
+        "75ACF121P00005",
+        "75ACF121C00015"
+      ]
+    }
+  ],
+  "metadata": [
+    {
+      "id": "R001",
+      "name": "Single-Bid Competition",
+      "description": "Flags competitively-solicited contracts that received only one bid",
+      "methodology": "Counts competitively-solicited contracts where number_of_offers_received = 1. Based on OCP Red Flags Guide and EU Single Market Scoreboard methodology.",
+      "thresholdsUsed": {
+        "severityThreshold": 0.2
+      },
+      "dataCoverage": {
+        "totalRecords": 3,
+        "recordsWithRequiredFields": 3,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "R002",
+      "name": "Non-Competitive Awards",
+      "description": "Flags awards made without open competition (sole-source, non-competed)",
+      "methodology": "Identifies awards with extent_competed codes indicating no open competition (B=Not Available, C=Not Competed, G=Not Competed Under SAP, NDO=Non-Competitive Delivery Order). Based on OECD Guidelines and Fazekas & Kocsis corruption risk methodology.",
+      "thresholdsUsed": {
+        "codesToFlagCount": 4
+      },
+      "dataCoverage": {
+        "totalRecords": 3,
+        "recordsWithRequiredFields": 3,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "R003",
+      "name": "Contract Value Splitting",
+      "description": "Detects clusters of awards just below regulatory thresholds",
+      "methodology": "Groups awards by (agency, recipient, period) and counts those falling within 10% below regulatory thresholds ($250,000, $7,500,000). Clusters of 3+ awards in the band suggest deliberate splitting.",
+      "thresholdsUsed": {
+        "bandWidthPct": 0.1,
+        "minClusterSize": 3,
+        "threshold_0": 250000,
+        "threshold_1": 7500000
+      },
+      "dataCoverage": {
+        "totalRecords": 3,
+        "recordsWithRequiredFields": 3,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "R004",
+      "name": "Vendor Concentration",
+      "description": "Flags when a single supplier dominates an agency's spending",
+      "methodology": "Computes each vendor's share of contract spend at agency, sub-agency, and NAICS sector levels. Flags vendors with >30% share. Based on EU Single Market Scoreboard concentration benchmarks.",
+      "thresholdsUsed": {
+        "vendorShareThreshold": 0.3,
+        "spikeThreshold": 0.15
+      },
+      "dataCoverage": {
+        "totalRecords": 3,
+        "recordsWithRequiredFields": 3,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "R005",
+      "name": "Excessive Modifications",
+      "description": "Flags contracts with too many modifications or excessive cost growth",
+      "methodology": "Counts substantive modifications (excluding $0 admin changes) per contract. Flags contracts with >5 modifications or cost growth >100%. Based on OECD procurement integrity guidelines.",
+      "thresholdsUsed": {
+        "maxModificationCount": 5,
+        "maxGrowthRatio": 2
+      },
+      "dataCoverage": {
+        "totalRecords": 3,
+        "recordsWithRequiredFields": 0,
+        "coveragePercent": 0
+      }
+    },
+    {
+      "id": "R006",
+      "name": "Price Outliers",
+      "description": "Flags awards with abnormally high amounts vs same-category peers",
+      "methodology": "Groups awards by NAICS/PSC code, computes Q1/Q3/IQR, flags amounts above Q3 + 1.5*IQR. Inspired by Cardinal-rs quartile-based thresholding.",
+      "thresholdsUsed": {
+        "minGroupSize": 5,
+        "iqrMultiplier": 1.5
+      },
+      "dataCoverage": {
+        "totalRecords": 3,
+        "recordsWithRequiredFields": 3,
+        "coveragePercent": 100
+      }
+    }
+  ],
+  "summary": {
+    "totalIndicatorsRun": 6,
+    "totalSignals": 1,
+    "signalsBySeverity": {
+      "high": 1
+    },
+    "signalsByIndicator": {
+      "R002": 1
+    }
+  }
+}

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Department of Health and Human Services → Family Endeavors — Procurement Investigation Dashboard</title>
+<style>
+  :root {
+    --color-bg: #f8f9fb;
+    --color-surface: #ffffff;
+    --color-border: #dde1e6;
+    --color-text: #1a1f36;
+    --color-text-muted: #5e6687;
+    --color-primary: #3b5998;
+    --color-primary-light: #e8edf5;
+    --color-high: #c0392b;
+    --color-high-bg: #fdf0ef;
+    --color-medium: #e67e22;
+    --color-medium-bg: #fef6ec;
+    --color-low: #2980b9;
+    --color-low-bg: #edf4fb;
+    --color-confirms: #27ae60;
+    --color-refutes: #c0392b;
+    --color-contextualizes: #2980b9;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-text);
+    background: var(--color-bg);
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
+  a { color: var(--color-primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; background: var(--color-primary-light); padding: 1px 5px; border-radius: 3px; }
+  pre { background: #f0f2f5; padding: 16px; border-radius: var(--radius); overflow-x: auto; font-size: 12px; }
+  h1 { margin: 0; font-size: 1.6em; font-weight: 700; }
+  h2 { font-size: 1.25em; font-weight: 600; color: var(--color-text); margin: 0 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--color-border); }
+  h3 { font-size: 1.05em; font-weight: 600; margin: 0 0 8px; }
+
+  /* Header */
+  .header { background: var(--color-primary); color: #fff; padding: 28px 0 20px; margin-bottom: 24px; }
+  .header .container { padding-bottom: 0; }
+  .header h1 { color: #fff; font-size: 1.5em; }
+  .header-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .meta-tag { background: rgba(255,255,255,0.18); padding: 3px 10px; border-radius: 12px; font-size: 0.85em; }
+
+  /* Disclaimer */
+  .disclaimer { background: #fffbeb; border: 1px solid #f5d060; border-left: 4px solid #f5a623; padding: 14px 18px; border-radius: var(--radius); margin-bottom: 24px; font-size: 0.9em; color: #6b5900; }
+
+  /* Sections */
+  .section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .section-subtitle { color: var(--color-text-muted); font-size: 0.9em; margin: -8px 0 16px; }
+
+  /* Summary cards */
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .summary-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .summary-card.card-high { border-color: var(--color-high); background: var(--color-high-bg); }
+  .summary-card.card-medium { border-color: var(--color-medium); background: var(--color-medium-bg); }
+  .summary-card.card-verified { border-color: #22c55e; background: #f0fdf4; }
+  .summary-card.card-low { border-color: var(--color-low); background: var(--color-low-bg); }
+  .summary-value { font-size: 1.8em; font-weight: 700; line-height: 1.2; }
+  .summary-label { font-size: 0.8em; color: var(--color-text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .exec-summary { background: var(--color-primary-light); padding: 14px 18px; border-radius: var(--radius); margin-top: 12px; line-height: 1.7; white-space: pre-wrap; }
+
+  /* Truncation notes */
+  .truncation-note { color: var(--color-text-muted); font-size: 0.85em; font-style: italic; margin-top: 12px; }
+
+  /* Tables */
+  .table-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: var(--color-bg); font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #f5f7fa; }
+
+  /* Severity badges */
+  .severity { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 700; letter-spacing: 0.04em; }
+  .severity-high { background: var(--color-high-bg); color: var(--color-high); }
+  .severity-medium { background: var(--color-medium-bg); color: var(--color-medium); }
+  .severity-low { background: var(--color-low-bg); color: var(--color-low); }
+
+  /* Type badges */
+  .type-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 600; }
+  .type-csv { background: #e8f5e9; color: #2e7d32; }
+  .type-chart { background: #e3f2fd; color: #1565c0; }
+  .type-json { background: #fff3e0; color: #e65100; }
+  .type-table { background: #f3e5f5; color: #7b1fa2; }
+
+  /* AI tag badges */
+  .ai-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7em; font-weight: 600; margin-left: 4px; }
+  .ai-tag-rule { background: #e8f5e9; color: #2e7d32; }
+  .ai-tag-aienhanced { background: #e3f2fd; color: #1565c0; }
+  .ai-tag-aidiscovered { background: #fff3e0; color: #e65100; }
+
+  /* Impact badges */
+  .impact-confirms { color: var(--color-confirms); font-weight: 600; }
+  .impact-refutes { color: var(--color-refutes); font-weight: 600; }
+  .impact-contextualizes { color: var(--color-contextualizes); font-weight: 600; }
+
+  /* Material Finding cards */
+  .finding-card { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .finding-card.card-high { border-left: 4px solid var(--color-high); background: var(--color-high-bg); }
+  .finding-card.card-medium { border-left: 4px solid var(--color-medium); background: var(--color-medium-bg); }
+  .finding-card.card-low { border-left: 4px solid var(--color-low); background: var(--color-low-bg); }
+  .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .finding-id { font-family: monospace; font-size: 0.85em; color: var(--color-primary); font-weight: 600; }
+  .finding-title { font-weight: 500; flex: 1; }
+  .finding-stats { display: flex; gap: 16px; font-size: 0.9em; margin-bottom: 12px; flex-wrap: wrap; }
+  .finding-stats .stat { white-space: nowrap; }
+  .entity-context { font-size: 0.8em; color: var(--color-text-muted); margin-bottom: 8px; font-style: italic; }
+  .five-cs { font-size: 0.9em; line-height: 1.7; }
+  .five-c { margin-bottom: 6px; }
+  .five-c.recommendation { background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: var(--radius); margin-top: 8px; }
+
+  /* Convergence */
+  .convergence-bar { height: 8px; background: var(--color-primary); border-radius: 4px; min-width: 4px; }
+
+  /* Charts */
+  .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .chart-container { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 16px; }
+  .chart-desc { color: var(--color-text-muted); font-size: 0.85em; margin: 0 0 12px; }
+  .chart-render { min-height: 200px; }
+  .chart-fallback { color: var(--color-text-muted); font-style: italic; text-align: center; padding: 40px 0; }
+
+  /* Hypothesis cards */
+  .hypothesis-card { border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+  .card-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--color-bg); cursor: pointer; user-select: none; }
+  .card-header:hover { background: #eef1f6; }
+  .card-id { font-family: monospace; font-size: 0.85em; color: var(--color-primary); font-weight: 600; white-space: nowrap; }
+  .card-question { flex: 1; font-weight: 500; }
+  .card-toggle { font-size: 0.7em; color: var(--color-text-muted); transition: transform 0.2s; }
+  .hypothesis-card.collapsed .card-body { display: none; }
+  .hypothesis-card.collapsed .card-toggle { transform: rotate(-90deg); }
+  .card-body { padding: 16px; border-top: 1px solid var(--color-border); }
+  .card-signals { font-size: 0.85em; color: var(--color-text-muted); margin: 0 0 12px; }
+  .card-context { line-height: 1.7; white-space: pre-wrap; margin-bottom: 12px; }
+  .evidence-links, .evidence-needed { margin-top: 12px; }
+  .evidence-links ul, .evidence-needed ul { margin: 6px 0 0; padding-left: 20px; }
+  .evidence-links li, .evidence-needed li { margin-bottom: 4px; font-size: 0.9em; }
+
+  /* Provenance */
+  .provenance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .prov-item { font-size: 0.9em; }
+  .prov-details { margin-top: 8px; }
+  .prov-details summary { cursor: pointer; font-weight: 500; color: var(--color-primary); font-size: 0.9em; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 24px 0 0; font-size: 0.8em; color: var(--color-text-muted); border-top: 1px solid var(--color-border); margin-top: 8px; }
+  .footer p { margin: 4px 0; }
+
+  .empty-state { color: var(--color-text-muted); font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 0 12px 32px; }
+    .section { padding: 16px; }
+    .summary-cards { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 1.2em; }
+    table { font-size: 0.8em; }
+    th, td { padding: 6px 8px; }
+  }
+  @media (max-width: 480px) {
+    .summary-cards { grid-template-columns: repeat(2, 1fr); }
+    .header-meta { flex-direction: column; }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+</head>
+<body>
+
+<!-- ─── Header ─────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="container">
+    <h1>Department of Health and Human Services → Family Endeavors</h1>
+    <div class="header-meta">
+      <span class="meta-tag">Agency: Department of Health and Human Services</span>
+      <span class="meta-tag">Recipient: Family Endeavors</span>
+      <span class="meta-tag">Period: 2021-01-01 to 2022-12-31</span>
+      <span class="meta-tag">Generated: 2026-02-12T22:04:25.782Z</span>
+    </div>
+  </div>
+</header>
+
+<!-- ─── Disclaimer ─────────────────────────────────────────────────────── -->
+<div class="container">
+  <div class="disclaimer">
+    <strong>Disclaimer:</strong> This report is a screening instrument. Red flags are
+    indicators that warrant further investigation by competent authorities. They are
+    <strong>not proof of wrongdoing</strong>. Unusual patterns may have legitimate
+    explanations. (OECD Guidelines for Fighting Bid Rigging, 2025; OCP Red Flags Guide, 2024)
+  </div>
+
+  <!-- ─── Executive Summary ──────────────────────────────────────────── -->
+  <section class="section">
+    <h2>Executive Summary</h2>
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-value">1</div>
+        <div class="summary-label">Signals Detected</div>
+      </div>
+      <div class="summary-card card-high">
+        <div class="summary-value">1</div>
+        <div class="summary-label">High Severity</div>
+      </div>
+      <div class="summary-card card-medium">
+        <div class="summary-value">0</div>
+        <div class="summary-label">Medium Severity</div>
+      </div>
+      <div class="summary-card card-low">
+        <div class="summary-value">0</div>
+        <div class="summary-label">Low Severity</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">3</div>
+        <div class="summary-label">Awards Analyzed</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">1</div>
+        <div class="summary-label">Hypotheses</div>
+      </div>
+      <div class="summary-card card-verified">
+        <div class="summary-value">6/6</div>
+        <div class="summary-label">Claims Verified</div>
+      </div>
+    </div>
+    <div class="exec-summary">Between January 2021 and December 2022, the Department of Health and Human Services awarded Family Endeavors, Inc. three contracts totaling approximately $2.01 billion, with all three awards executed through non-competitive procedures. This procurement pattern represents 100% non-competitive contracting with a single vendor over the two-year period, a level of sole-source reliance that warrants additional review of the justification documentation and competitive feasibility assessments. The dollar magnitude—exceeding $2 billion—and complete absence of competitive awards in this vendor relationship suggests this case merits examination of whether emergency authorities or unique capability determinations were appropriately applied. This screening identifies the pattern for further administrative review to ensure compliance with federal competition requirements.</div>
+    <div class="exec-summary"><strong>Investigator Assessment:</strong> Investigation completed after 10 iterations (max iterations reached). 21 tool calls executed.</div>
+  </section>
+
+  <!-- ─── Convergence Analysis ─────────────────────────────────────── -->
+  
+
+  <!-- ─── Material Findings ────────────────────────────────────────── -->
+  <section class="section">
+    <h2>Material Findings</h2>
+    <p class="section-subtitle">1 findings ranked by materiality (dollar exposure × severity × signal count)</p>
+    <div class="finding-card card-high">
+      <div class="finding-header">
+        <span class="finding-id">F-R002-FAMIL-ENDEA-NONCOMP</span>
+        <span class="severity severity-high">HIGH</span>
+        <span class="ai-tag ai-tag-rule">RULE</span>
+        <span class="finding-title">Non-Competitive Awards — FAMILY ENDEAVORS, INC.</span>
+      </div>
+      <div class="entity-context">CHILD AND YOUTH SERVICES · Set-aside: NONE · 3 awards in dataset · active 2021-03-17 to 2022-05-16</div>
+      <div class="finding-stats">
+        <span class="stat"><strong>Exposure:</strong> $2,013,664,365.4</span>
+        <span class="stat"><strong>Awards:</strong> 3</span>
+        <span class="stat"><strong>Signals:</strong> 1</span>
+      </div>
+      <div class="five-cs">
+          <div class="five-c"><strong>Condition:</strong> 100.0% of awards (by count) to FAMILY ENDEAVORS, INC. were non-competitive, totaling $2,013,664,365.4 across 3 awards.</div>
+          <div class="five-c"><strong>Criteria:</strong> FAR 6.302 permits non-competitive procurement only under specific circumstances (sole source, urgency, national security). OECD Guidelines (2025) flag persistent non-competitive patterns as a procurement integrity indicator.</div>
+          <div class="five-c"><strong>Cause:</strong> Non-competitive awards may reflect unique capabilities (e.g., FFRDC, UARC status), legitimate sole-source justifications, or habitual use of non-competitive mechanisms without adequate market research.</div>
+          <div class="five-c"><strong>Effect:</strong> $2,013,664,365.4 in awards bypassed competition. While individual justifications may be valid, the cumulative pattern reduces the transparency and competitiveness of the procurement portfolio.</div>
+          <div class="five-c recommendation"><strong>Recommendation:</strong> Verify sole-source justifications (J&amp;A documentation) for the largest non-competitive awards. Check entity type via SAM.gov (FFRDC/UARC status may explain the pattern). Consider whether market research could identify additional qualified sources.</div>
+        </div>
+    </div>
+  </section>
+
+  <!-- ─── Signal Table ───────────────────────────────────────────────── -->
+  <section class="section">
+    <h2>Signals Detected</h2>
+    <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Severity</th>
+          <th>Indicator</th>
+          <th>Entity</th>
+          <th>Value</th>
+          <th>Threshold</th>
+          <th>Context</th>
+        </tr>
+      </thead>
+      <tbody><tr>
+        <td>1</td>
+        <td><span class="severity severity-high">HIGH</span></td>
+        <td><code>R002</code> Non-Competitive Awards</td>
+        <td>FAMILY ENDEAVORS, INC.</td>
+        <td class="num">100</td>
+        <td class="num">50</td>
+        <td>3 of 3 awards (100.0%) to FAMILY ENDEAVORS, INC. were non-competitive. Non-competed amount: $2,013,664,365.4 (100.0% ...</td>
+      </tr></tbody>
+    </table>
+  </div>
+  
+  </section>
+
+  <!-- ─── Charts ─────────────────────────────────────────────────────── -->
+  <section class="section">
+    <h2>Visual Evidence</h2>
+    <div class="charts-grid">
+      <div class="chart-container">
+        <h3>Who Got the Money?</h3>
+        <p class="chart-desc">Top 15 vendors ranked by total award amount, color-coded by competition status.</p>
+        <div id="chart-C-top-vendors" class="chart-render"></div>
+      </div>
+    <div class="chart-container">
+        <h3>How Competitive Was the Spending?</h3>
+        <p class="chart-desc">Breakdown of awards by competition type: count vs. dollar value.</p>
+        <div id="chart-C-competition-analysis" class="chart-render"></div>
+      </div>
+    <div class="chart-container">
+        <h3>When Did the Money Flow?</h3>
+        <p class="chart-desc">Monthly award spending, segmented by competition status.</p>
+        <div id="chart-C-award-timeline" class="chart-render"></div>
+      </div>
+    <div class="chart-container">
+        <h3>What Should Be Investigated?</h3>
+        <p class="chart-desc">Top findings ranked by dollar exposure, color-coded by indicator type.</p>
+        <div id="chart-C-findings-exposure" class="chart-render"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Hypotheses ─────────────────────────────────────────────────── -->
+  <section class="section">
+    <h2>Hypotheses &amp; Evidence</h2>
+    
+    <div class="hypothesis-card">
+      <div class="card-header">
+        <span class="card-id">H-R002-FAMILY E</span>
+        <span class="severity severity-high">HIGH</span>
+        <span class="card-question">Does the pattern of non-competitive awards to FAMILY ENDEAVORS, INC. warrant closer examination?</span>
+        <span class="ai-tag">AI-ENHANCED</span>
+        <span class="card-toggle">&#9660;</span>
+      </div>
+      <div class="card-body">
+        <p class="card-signals">Triggered by: <code>R002</code></p>
+        <div class="card-context">**Refined Analysis:**
+
+All three awards to Family Endeavors, Inc., totaling approximately $2.01 billion, were executed non-competitively, representing 100% of the contracting portfolio with this vendor. This concentration could reflect legitimate urgent operational needs—such as emergency humanitarian services requiring immediate mobilization of established providers with specialized facilities and clearances—or statutory authorities permitting sole-source awards under specific circumstances. However, the pattern raises questions about whether competitive alternatives were adequately explored, particularly for follow-on awards, or if market research identified this vendor as genuinely unique across all three procurements. 
+
+**Recommended Next Steps:** Reviewers should examine the Justification &amp; Approval (J&amp;A) documentation for each award to verify the stated rationale, assess whether urgency or unique capability claims were substantiated, and determine if the procuring agency conducted periodic market research to confirm ongoing lack of viable competitors.</div>
+        
+        <div class="evidence-needed">
+        <strong>Evidence Needed for Further Review:</strong>
+        <ul><li>Breakdown of non-competed awards by justification code</li><li>Dollar distribution of competed vs non-competed awards</li><li>Comparison of non-competitive rate with agency average</li></ul>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Evidence Links ─────────────────────────────────────────────── -->
+  <section class="section">
+    <h2>Evidence Artifacts</h2>
+    <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Hypothesis</th>
+          <th>Type</th>
+          <th>Title</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody><tr>
+        <td><code>E-F-R002-FAMIL-ENDEA-NONCOMP-breakdown</code></td>
+        <td>F-R002-FAMIL-ENDEA-NONCOMP</td>
+        <td><span class="type-badge type-csv">CSV</span></td>
+        <td><a href="evidence/summary/F-R002-FAMIL-ENDEA-NONCOMP-competition-breakdown.csv">Competition Type Breakdown</a></td>
+        <td>Breakdown of 3 awards by competition type code with dollar amounts.</td>
+      </tr>
+<tr>
+        <td><code>E-F-R002-FAMIL-ENDEA-NONCOMP-detail</code></td>
+        <td>F-R002-FAMIL-ENDEA-NONCOMP</td>
+        <td><span class="type-badge type-csv">CSV</span></td>
+        <td><a href="evidence/summary/F-R002-FAMIL-ENDEA-NONCOMP-non-competed-awards.csv">Non-Competed Awards Detail</a></td>
+        <td>3 non-competed awards sorted by amount.</td>
+      </tr></tbody>
+    </table>
+  </div>
+  
+  </section>
+
+  <!-- ─── Investigation Details ──────────────────────────────────────── -->
+  <section class="section">
+    <h2>Investigation Details</h2>
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-value">10</div>
+        <div class="summary-label">Agent Iterations</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">21</div>
+        <div class="summary-label">Tool Calls</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value">$1.44</div>
+        <div class="summary-label">Estimated Cost</div>
+      </div>
+    </div>
+    
+    <details class="prov-details">
+        <summary>Tool Call Log (21 calls)</summary>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Tool</th><th>Duration</th><th>Cache</th><th>Error</th></tr></thead>
+            <tbody><tr>
+              <td><code>log_reasoning</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>verify_entity</code></td>
+              <td class="num">8053ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>screen_sanctions</code></td>
+              <td class="num">586ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>lookup_award_detail</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>lookup_award_detail</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>lookup_award_detail</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>log_reasoning</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>verify_entity</code></td>
+              <td class="num">3638ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>fetch_subawards</code></td>
+              <td class="num">813ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>fetch_subawards</code></td>
+              <td class="num">199ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>fetch_comparable_awards</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>fetch_comparable_awards</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>log_reasoning</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>analyze_statistical_pattern</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>analyze_statistical_pattern</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>fetch_comparable_awards</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>log_reasoning</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>verify_entity</code></td>
+              <td class="num">7877ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>analyze_statistical_pattern</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>log_reasoning</code></td>
+              <td class="num">0ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr><tr>
+              <td><code>screen_sanctions</code></td>
+              <td class="num">206ms</td>
+              <td>&#10007;</td>
+              <td>—</td>
+            </tr></tbody>
+          </table>
+        </div>
+      </details>
+  </section>
+
+  <!-- ─── Provenance ─────────────────────────────────────────────────── -->
+  <section class="section provenance">
+    <h2>Provenance &amp; Audit Trail</h2>
+    <div class="provenance-grid">
+      <div class="prov-item"><strong>Generated:</strong> 2026-02-12T22:04:25.782Z</div>
+      <div class="prov-item"><strong>Tool Version:</strong> 0.1.0</div>
+      <div class="prov-item"><strong>Git Commit:</strong> <code>5ddf8bce162a7afe61265fe5e0f706f40888699c</code></div>
+      <div class="prov-item"><strong>Node.js:</strong> v20.19.4</div>
+      
+      <div class="prov-item"><strong>Source:</strong> USAspending API — 3 records (cached, 2026-02-12)</div>
+    </div>
+    <details class="prov-details">
+      <summary>Run Parameters</summary>
+      <pre><code>{
+  &quot;agency&quot;: &quot;Department of Health and Human Services&quot;,
+  &quot;recipient&quot;: &quot;Family Endeavors&quot;,
+  &quot;periodStart&quot;: &quot;2021-01-01&quot;,
+  &quot;periodEnd&quot;: &quot;2022-12-31&quot;,
+  &quot;outputDir&quot;: &quot;./cases&quot;,
+  &quot;awardTypeCodes&quot;: [
+    &quot;A&quot;,
+    &quot;B&quot;,
+    &quot;C&quot;,
+    &quot;D&quot;
+  ]
+}</code></pre>
+    </details>
+  </section>
+
+  <!-- ─── Footer ─────────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <p>Generated by <strong>Procurement Investigator</strong> (Investigation-as-Code)</p>
+    <p>Methodology: OCP Red Flags Guide (2024) &middot; OECD Bid Rigging Guidelines (2025)</p>
+  </footer>
+</div>
+
+<!-- ─── Inline Data (truncated for size; full data in data/*.json) ────── -->
+<script>
+  window.__DASHBOARD_DATA__ = {"title":"Department of Health and Human Services → Family Endeavors","generatedAt":"2026-02-12T22:04:25.782Z","params":{"agency":"Department of Health and Human Services","recipient":"Family Endeavors","periodStart":"2021-01-01","periodEnd":"2022-12-31","outputDir":"./cases","awardTypeCodes":["A","B","C","D"]},"signals":[{"indicatorId":"R002","indicatorName":"Non-Competitive Awards","severity":"high","entityType":"recipient","entityId":"FAMILY ENDEAVORS, INC.","entityName":"FAMILY ENDEAVORS, INC.","value":100,"threshold":50,"context":"3 of 3 awards (100.0%) to FAMILY ENDEAVORS, INC. were non-competitive. Non-competed amount: $2,013,664,365.4 (100.0% ...","affectedAwards":["75ACF122C00016","75ACF121P00005","75ACF121C00015"]}],"totalSignalCount":1,"hypotheses":[{"id":"H-R002-FAMILY E","signalIds":["R002"],"question":"Does the pattern of non-competitive awards to FAMILY ENDEAVORS, INC. warrant closer examination?","context":"**Refined Analysis:**\n\nAll three awards to Family Endeavors, Inc., totaling approximately $2.01 billion, were executed non-competitively, representing 100% of the contracting portfolio with this vendor. This concentration could reflect legitimate urgent operational needs—such as emergency humanitari","evidenceNeeded":["Breakdown of non-competed awards by justification code","Dollar distribution of competed vs non-competed awards","Comparison of non-competitive rate with agency average"],"severity":"high"}],"totalHypothesisCount":1,"evidence":[{"id":"E-F-R002-FAMIL-ENDEA-NONCOMP-breakdown","hypothesisId":"F-R002-FAMIL-ENDEA-NONCOMP","type":"csv","title":"Competition Type Breakdown","filePath":"evidence/summary/F-R002-FAMIL-ENDEA-NONCOMP-competition-breakdown.csv"},{"id":"E-F-R002-FAMIL-ENDEA-NONCOMP-detail","hypothesisId":"F-R002-FAMIL-ENDEA-NONCOMP","type":"csv","title":"Non-Competed Awards Detail","filePath":"evidence/summary/F-R002-FAMIL-ENDEA-NONCOMP-non-competed-awards.csv"}],"totalEvidenceCount":2,"charts":[{"id":"C-top-vendors","title":"Who Got the Money?","description":"Top 15 vendors ranked by total award amount, color-coded by competition status."},{"id":"C-competition-analysis","title":"How Competitive Was the Spending?","description":"Breakdown of awards by competition type: count vs. dollar value."},{"id":"C-award-timeline","title":"When Did the Money Flow?","description":"Monthly award spending, segmented by competition status."},{"id":"C-findings-exposure","title":"What Should Be Investigated?","description":"Top findings ranked by dollar exposure, color-coded by indicator type."}],"provenance":{"timestamp":"2026-02-12T22:04:25.782Z","toolVersion":"0.1.0","gitCommit":"5ddf8bce162a7afe61265fe5e0f706f40888699c"},"materialFindings":[{"id":"F-R002-FAMIL-ENDEA-NONCOMP","entityName":"FAMILY ENDEAVORS, INC.","indicatorId":"R002","indicatorName":"Non-Competitive Awards","severity":"high","materialityScore":27911961.254062045,"totalDollarValue":2013664365.4,"signalCount":1,"affectedAwardIds":["75ACF122C00016","75ACF121P00005","75ACF121C00015"],"fiveCs":{"condition":"100.0% of awards (by count) to FAMILY ENDEAVORS, INC. were non-competitive, totaling $2,013,664,365.4 across 3 awards.","criteria":"FAR 6.302 permits non-competitive procurement only under specific circumstances (sole source, urgency, national security). OECD Guidelines (2025) flag persistent non-competitive patterns as a procurement integrity indicator.","cause":"Non-competitive awards may reflect unique capabilities (e.g., FFRDC, UARC status), legitimate sole-source justifications, or habitual use of non-competitive mechanisms without adequate market research.","effect":"$2,013,664,365.4 in awards bypassed competition. While individual justifications may be valid, the cumulative pattern reduces the transparency and competitiveness of the procurement portfolio.","recommendation":"Verify sole-source justifications (J&A documentation) for the largest non-competitive awards. Check entity type via SAM.gov (FFRDC/UARC status may explain the pattern). Consider whether market research could identify additional qualified sources."},"aiTag":"RULE","entityContext":{"naicsDescription":"CHILD AND YOUTH SERVICES","setAsideType":"NONE","totalAwardsInDataset":3,"firstAwardDate":"2021-03-17","lastAwardDate":"2022-05-16"}}],"convergenceEntities":[],"investigationFindings":{"summary":"Investigation completed after 10 iterations (max iterations reached). 21 tool calls executed.","iterations":10,"toolCallCount":21,"crossReferences":[],"estimatedCostUsd":1.4401799999999998},"awardCount":3};
+</script>
+
+<!-- ─── Chart Rendering ──────────────────────────────────────────────── -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof vegaEmbed === 'undefined') {
+      document.querySelectorAll('.chart-render').forEach(function(el) {
+        el.innerHTML = '<p class="chart-fallback">Charts require an internet connection to load Vega-Lite from CDN.</p>';
+      });
+      return;
+    }
+  vegaEmbed('#chart-C-top-vendors', {"$schema":"https://vega.github.io/schema/vega-lite/v5.json","title":{"text":"Who Got the Money?","subtitle":"Top 15 vendors by total award value"},"width":700,"height":400,"data":{"values":[{"vendor":"FAMILY ENDEAVORS, INC.","amount":2013664365.4,"type":"Non-Competitive","label":"$2.0B","sortOrder":0}]},"mark":{"type":"bar","tooltip":true},"encoding":{"y":{"field":"vendor","type":"nominal","title":null,"sort":{"field":"sortOrder","order":"ascending"},"axis":{"labelLimit":280}},"x":{"field":"amount","type":"quantitative","title":"Total Award Amount","stack":"zero","axis":{"format":"~s","labelExpr":"'$' + datum.label"}},"color":{"field":"type","type":"nominal","title":"Competition Status","scale":{"domain":["Competitive","Non-Competitive"],"range":["#2563EB","#DC2626"]},"legend":{"orient":"top"}},"tooltip":[{"field":"vendor","type":"nominal","title":"Vendor"},{"field":"type","type":"nominal","title":"Status"},{"field":"amount","type":"quantitative","title":"Amount ($)","format":",.0f"}]}}, {actions: {source: false, compiled: false}}).catch(function(err) { console.warn('Chart C-top-vendors:', err); });
+  vegaEmbed('#chart-C-competition-analysis', {"$schema":"https://vega.github.io/schema/vega-lite/v5.json","title":{"text":"How Competitive Was the Spending?","subtitle":"Awards by competition type (count vs. dollar value)"},"width":700,"height":400,"data":{"values":[{"type":"Not Competed","metric":"By Count","value":2,"pct":66.66666666666666},{"type":"Not Competed","metric":"By Dollar Value","value":1299756930.07,"pct":64.54685062730464},{"type":"Not Competed (SAP)","metric":"By Count","value":1,"pct":33.33333333333333},{"type":"Not Competed (SAP)","metric":"By Dollar Value","value":713907435.33,"pct":35.45314937269535}]},"facet":{"column":{"field":"metric","type":"nominal","title":null,"header":{"labelFontSize":13,"labelFontWeight":"bold"}}},"spec":{"width":310,"height":300,"mark":{"type":"bar","tooltip":true},"encoding":{"y":{"field":"type","type":"nominal","title":null,"sort":{"field":"pct","order":"descending"},"axis":{"labelLimit":200}},"x":{"field":"pct","type":"quantitative","title":"% of Total","axis":{"format":".0f"}},"color":{"field":"type","type":"nominal","title":"Competition Type","scale":{"domain":["Not Competed","Not Competed (SAP)"],"range":["#DC2626","#DC2626"]},"legend":{"orient":"bottom","columns":3}},"tooltip":[{"field":"type","type":"nominal","title":"Type"},{"field":"pct","type":"quantitative","title":"Percentage","format":".1f"},{"field":"value","type":"quantitative","title":"Value","format":",.0f"}]}}}, {actions: {source: false, compiled: false}}).catch(function(err) { console.warn('Chart C-competition-analysis:', err); });
+  vegaEmbed('#chart-C-award-timeline', {"$schema":"https://vega.github.io/schema/vega-lite/v5.json","title":{"text":"When Did the Money Flow?","subtitle":"Monthly award amounts by competition status"},"width":700,"height":400,"data":{"values":[{"month":"2021-03-01","amount":714664375.33,"type":"Non-Competitive"},{"month":"2022-05-01","amount":1298999990.07,"type":"Non-Competitive"}]},"mark":{"type":"bar","tooltip":true},"encoding":{"x":{"field":"month","type":"temporal","title":null,"timeUnit":"yearmonth","axis":{"format":"%b %Y","labelAngle":-45}},"y":{"field":"amount","type":"quantitative","title":"Award Amount","stack":"zero","axis":{"format":"~s","labelExpr":"'$' + datum.label"}},"color":{"field":"type","type":"nominal","title":"Competition Status","scale":{"domain":["Competitive","Non-Competitive"],"range":["#2563EB","#DC2626"]},"legend":{"orient":"top"}},"tooltip":[{"field":"month","type":"temporal","title":"Month","timeUnit":"yearmonth","format":"%B %Y"},{"field":"type","type":"nominal","title":"Status"},{"field":"amount","type":"quantitative","title":"Amount ($)","format":",.0f"}]}}, {actions: {source: false, compiled: false}}).catch(function(err) { console.warn('Chart C-award-timeline:', err); });
+  vegaEmbed('#chart-C-findings-exposure', {"$schema":"https://vega.github.io/schema/vega-lite/v5.json","title":{"text":"What Should Be Investigated?","subtitle":"Material findings ranked by dollar exposure"},"width":700,"height":400,"data":{"values":[{"finding":"FAMILY ENDEAVORS, INC.","indicator":"Non-Competitive","indicatorId":"R002","exposure":2013664365.4,"label":"$2.0B","severity":"high","sortOrder":0}]},"mark":{"type":"bar","tooltip":true},"encoding":{"y":{"field":"finding","type":"nominal","title":null,"sort":{"field":"sortOrder","order":"ascending"},"axis":{"labelLimit":280}},"x":{"field":"exposure","type":"quantitative","title":"Dollar Exposure","axis":{"format":"~s","labelExpr":"'$' + datum.label"}},"color":{"field":"indicator","type":"nominal","title":"Indicator","scale":{"domain":["Non-Competitive"],"range":["#DC2626"]},"legend":{"orient":"top"}},"tooltip":[{"field":"finding","type":"nominal","title":"Entity"},{"field":"indicator","type":"nominal","title":"Indicator"},{"field":"exposure","type":"quantitative","title":"Exposure ($)","format":",.0f"},{"field":"severity","type":"nominal","title":"Severity"}]}}, {actions: {source: false, compiled: false}}).catch(function(err) { console.warn('Chart C-findings-exposure:', err); });
+  });
+</script>
+
+<!-- ─── Interactivity ────────────────────────────────────────────────── -->
+<script>
+  document.querySelectorAll('.hypothesis-card .card-header').forEach(function(header) {
+    header.addEventListener('click', function() {
+      var card = header.parentElement;
+      card.classList.toggle('collapsed');
+    });
+  });
+</script>
+
+</body>
+</html>
