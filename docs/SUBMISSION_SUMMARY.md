@@ -1,0 +1,7 @@
+# Hackathon Submission Summary
+
+I'm a software engineer with zero procurement expertise. I used Opus 4.6 as my research team: multiple agents surveyed open-source tools in the space (Cardinal-rs, OCDSKit, Kingfisher Collect), explored OECD bid-rigging methodology, the Open Contracting Partnership's 73 red-flag indicators, and GAO's Five C's audit framework. Opus analyzed the Cardinal-rs Rust rule engine and we iterated on a TypeScript architecture together. That research became the knowledge base.
+
+Then I built Procurement Investigator in three days -- a CLI that codifies anti-corruption expertise locked behind $50K/year tools into open-source Investigation-as-Code. The same Opus 4.6 that taught me the domain now runs inside the tool as an autonomous investigative agent -- it loops through flagged findings, forms hypotheses, follows leads across government databases (SAM.gov, OpenSanctions), and externalizes every thought via a `log_reasoning` tool so you can read its reasoning like a detective's notebook.
+
+Pointed it at 7,259 FEMA COVID contracts with zero prior knowledge: independently flagged Fillakit LLC (shipped soda bottles instead of test tubes, later investigated by the Senate) and Parkdale Mills ($532M sole-source). Every claim in the report is automatically cross-checked against the underlying data -- nothing slips through unverified. Works without AI too, at zero cost.

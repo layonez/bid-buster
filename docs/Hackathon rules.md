@@ -83,3 +83,46 @@ To keep things fair and aligned with our goals, all teams must follow these rule
 [Building agents with Skills: Equipping agents for specialized work](https://claude.com/blog/building-agents-with-skills-equipping-agents-for-specialized-work)
 
 [Claude Code power user customization: How to configure hooks](https://claude.com/blog/how-to-configure-hooks)
+
+## Judging
+
+Judging for the Anthropic Virtual Hackathon happens in two stages:
+
+### Stage 1 – Asynchronous Judging
+
+- Date: Feb 16th - Feb 17th
+
+- How it works:
+
+  - Judges review your submitted projects asynchronously via the judging platform.
+
+  - Each team will have uploaded:
+
+    1. A short demo video (3 minute maximum)
+
+    2. Open Source Project repository / code
+
+    3. Written summary (100–200 words)
+
+  - Judges independently evaluate projects using standardized criteria.\
+    Judging Criteria:
+
+    1. Impact (25%) - What's the real-world potential here? Who benefits, and how much does it matter? Could this actually become something people use? Does it fit into one of the problem statements listed above?
+
+    2. Opus 4.6 Use (25%) - How creatively did this team use Opus 4.6? Did they go beyond a basic integration? Did they surface capabilities that surprised even us?
+
+    3. Depth & Execution (20%) — Did the team push past their first idea? Is the engineering sound and thoughtfully refined? Does this feel like something that was wrestled with — real craft, not just a quick hack?
+
+    4. Demo (30%) *—* Is this a working, impressive demo? Does it hold up live? Is it genuinely cool to watch?
+
+  - After evaluation, the team aggregates scores to determine the Top 6 projects for the final round
+
+### Stage 2 – Final Round Live Judging
+
+- Date & Time: Feb 18th, 12:00PM EST
+
+- Format:
+
+  - During the live session, pre-recorded demos from each team will be played (3 minutes per team).
+
+  - Judges will deliberate after all demos to determine the 1st, 2nd, and 3rd place along with extra prizes.

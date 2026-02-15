@@ -1,16 +1,18 @@
 # Procurement Investigator
 
-**Investigation-as-Code: AI-powered procurement integrity screening for everyone**
+**One person. One command. $700 billion in public spending, audited.**
 
-> One command. 7,259 FEMA contracts. Zero prior knowledge. The system independently flagged a company that shipped soda bottles instead of COVID test tubes -- later investigated by the Senate and DHS Inspector General. Every finding is reproducible and verified.
+> *Built by a software engineer with zero procurement expertise. Claude Opus 4.6 helped research the domain, architect the tool, and now powers the investigations. This is what "Break the Barriers" looks like.*
 
-`128 tests passing` | `TypeScript strict` | `MIT License` | `Node 20+` | `47 files, ~9,865 lines`
+> **Hackathon 2025 | Problem Statement #2: Break the Barriers** | [Sample Output](cases/fema-2026-02-12/README.md)
+
+![Tests](https://img.shields.io/badge/tests-128%20passing-brightgreen) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Node](https://img.shields.io/badge/node-20%2B-339933) ![Lines](https://img.shields.io/badge/lines-~9%2C865-informational)
 
 ---
 
 ## It Works: FEMA COVID-19 Emergency Procurement
 
-We pointed our tool at FEMA's 2020 pandemic procurement -- **7,259 contracts, zero prior knowledge of any specific vendor:**
+I pointed the tool at FEMA's 2020 pandemic procurement -- **7,259 contracts, zero prior knowledge of any specific vendor:**
 
 ```bash
 investigate run --subtier-agency="Federal Emergency Management Agency" \
@@ -26,9 +28,9 @@ The system independently flagged:
 | **3M Company** | $96M | Price outlier in safety equipment | GAO Report GAO-20-632 |
 | **GDIT** | $97M | Vendor concentration in IT services | Major FEMA IT contractor |
 
-**1,465 raw signals -> 16 material findings** (92x reduction). **2 convergence entities** flagged by multiple independent indicators. **36/36 claims verified** against computed evidence. **5.0 MB** git-committable case folder.
+**1,465 signals -> 16 material findings** (92x noise reduction) | **2 convergence entities** (multi-indicator) | **36/36 claims verified** (100%) | **5.0 MB** git-committable case folder
 
-> *Fillakit LLC -- a company formed 6 days before receiving a $10.16M FEMA contract for COVID test tubes -- later shipped unusable mini soda bottles. Our system flags Fillakit's single-bid urgency pattern automatically. The Senate and DHS Inspector General subsequently investigated.*
+> **The soda bottle test.** Fillakit LLC was formed 6 days before receiving a $10.16M FEMA contract for COVID test tubes. They shipped miniature soda bottles. Our system flags this automatically -- single-bid urgency pattern, no prior contract history, anomalous pricing. The Senate and DHS Inspector General later investigated the same company.
 >
 > [ProPublica: "The Trump Administration Paid Millions for Test Tubes -- and Got Unusable Mini Soda Bottles"](https://www.propublica.org/article/the-trump-administration-paid-millions-for-test-tubes-and-got-unusable-mini-soda-bottles)
 
@@ -36,15 +38,15 @@ The system independently flagged:
 
 ## What Makes This Novel
 
-1. **Investigation-as-Code** -- The entire audit methodology is codified, version-controlled, and reproducible. Every run produces a git-committable case folder with full provenance. Not locked in a PDF manual or institutional knowledge.
+1. **Opus 4.6 as Autonomous Investigator** -- Not a chatbot wrapper. The agent runs an independent investigation loop: 8 iterations, 35 tool calls, entity verification via SAM.gov, sanctions screening, comparative analysis -- and externalizes every thought via `log_reasoning` so you can read its reasoning like a detective's notebook.
 
-2. **AI amplifies, doesn't replace** -- Claude Opus 4.6 investigates autonomously, but every claim must pass verification against computed evidence. The core signal detection works without any AI at all (`--no-ai`, $0 cost).
+2. **Self-Verifying AI** -- Every claim the agent makes must survive a verification pass against computed statistical evidence. The Verifier agent rejects unsupported assertions and catches tautological reasoning. Built-in quality gate that most AI tools lack.
 
-3. **Self-verifying** -- The Verifier agent cross-checks every claim against computed evidence and rejects unsupported assertions. Built-in quality gate that most AI tools lack.
+3. **Investigation-as-Code** -- The entire audit methodology is codified, version-controlled, and reproducible. Every run produces a git-committable case folder with full provenance. Not locked in a PDF manual or institutional knowledge.
 
 4. **Multi-signal convergence** -- When multiple independent statistical tests flag the same entity, that's a meaningful signal, not noise. Parkdale was flagged by both R004 (concentration) AND R006 (price outlier) independently.
 
-5. **Transparent reasoning** -- The agent's `log_reasoning` tool externalizes every thought, hypothesis, and dead end into a readable investigation narrative. Users see the process, not just conclusions.
+5. **Three-tier AI architecture** -- Opus 4.6 for deep investigation ($4/case), Sonnet 4.5 for cost-efficient narrative enrichment ($0.10/case), template fallback for $0. Graceful degradation ensures accessibility at any budget.
 
 6. **Open methodology** -- 6 indicators from recognized frameworks (OCP, OECD, GAO) with configurable thresholds. Not a black-box risk score.
 
@@ -61,16 +63,18 @@ The system independently flagged:
 ### Install & Run
 
 ```bash
-git clone https://github.com/AnsKaz-github/bid-buster.git
-cd bid-buster
-npm install
+git clone https://github.com/AnsKaz-github/bid-buster.git && cd bid-buster && npm install
 
-# Run an investigation (no AI required, $0 cost)
+# Try it now -- no API key needed, $0 cost, ~2 minutes
 npm run investigate -- run \
   --subtier-agency="Federal Emergency Management Agency" \
   --period=2020-01-01:2020-12-31 \
   --charts --no-ai
 
+# Output: cases/fema-{date}/ -- open dashboard.html in your browser
+```
+
+```bash
 # With AI investigation (requires ANTHROPIC_API_KEY in .env, ~$4/case)
 npm run investigate -- run \
   --subtier-agency="Federal Emergency Management Agency" \
@@ -97,6 +101,16 @@ OPENSANCTIONS_API_KEY=...             # Optional: sanctions/PEP screening
 
 ---
 
+## The Personal Journey
+
+I'm a software engineer. I had never worked in government contracting. Before this project, I didn't know what FAR 6.302 was or why single-bid rates matter.
+
+Claude Opus 4.6 made this possible -- not just as a coding assistant, but as a domain research team. Multiple agents explored OECD bid-rigging methodology, the Open Contracting Partnership's 73-indicator catalogue, and GAO audit standards. Opus analyzed the [Cardinal-rs](https://github.com/open-contracting/cardinal-rs) Rust rule engine and we iterated together on a TypeScript adaptation of its fold/finalize architecture. It introduced me to the GAO Yellow Book's Five C's framework -- that's what gives every finding professional audit structure.
+
+**That's the point.** The same AI that taught me the domain now runs the investigations. If a non-expert can build a professional-grade integrity screening tool in three days, imagine what journalists, watchdogs, and oversight offices can do with it.
+
+---
+
 ## The Problem We Solve
 
 Public procurement represents **one-third of government spending** -- ~$700 billion/year in the US alone. Identifying integrity risks currently requires:
@@ -106,8 +120,8 @@ Public procurement represents **one-third of government spending** -- ~$700 bill
 - Familiarity with complex procurement data schemas (FPDS-NG, USAspending)
 - Statistical expertise to distinguish genuine anomalies from noise
 
-**Before this tool:** Hire a $200K/year forensic auditor with OECD methodology training.
-**After this tool:** `npm run investigate -- run --subtier-agency="FEMA" --period=2020-01-01:2020-12-31`
+**Before:** Hire a $200K/year forensic auditor with OECD methodology training.
+**After:** `npm run investigate -- run --subtier-agency="FEMA" --period=2020-01-01:2020-12-31`
 
 Built for [Anthropic's Hackathon 2025](https://lu.ma/Anthropic-Hackathon) | **Problem Statement #2: "Break the Barriers"** -- take something powerful that's locked behind expertise, cost, and infrastructure and put it in everyone's hands.
 
@@ -365,15 +379,15 @@ src/
 
 ---
 
-## Hackathon Compliance
+## Hackathon Alignment
 
-| Requirement | Status |
-|-------------|--------|
-| Open source (all components) | MIT License |
-| New work only | Git history shows clean start (30+ commits) |
-| Team size <= 2 | Yes |
-| No banned content | Public data only, non-accusatory framing |
-| Problem statement | **#2 "Break the Barriers"** -- expert procurement audit methodology in everyone's hands |
+| | |
+|---|---|
+| **Problem Statement** | #2 "Break the Barriers" -- expert procurement audit in everyone's hands |
+| **Open Source** | MIT License, all components |
+| **New Work** | Built from scratch in ~3 days (see git history) |
+| **Team** | 1-2 members |
+| **Claude Models** | Opus 4.6 (research + investigation agent) + Sonnet 4.5 (narrative) + $0 fallback |
 
 ---
 
@@ -394,4 +408,4 @@ MIT
 
 ---
 
-*Built with Claude Opus 4.6 + Claude Sonnet 4.5 for Anthropic's Hackathon 2025. Open source. Investigation-as-Code.*
+*The same AI that taught me procurement methodology now runs the investigations. Built with Claude Opus 4.6 + Sonnet 4.5. Open source. Investigation-as-Code.*
